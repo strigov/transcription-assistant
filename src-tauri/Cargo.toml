@@ -1,0 +1,30 @@
+[package]
+name = "transcription-assistant"
+version = "0.1.0"
+description = "Desktop application for audio/video transcription workflow assistance"
+authors = ["Transcription Assistant Team"]
+license = "MIT"
+repository = "https://github.com/transcription-assistant/transcription-assistant"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.5", features = [ "shell-open", "dialog-open", "dialog-message", "dialog-confirm", "dialog-ask", "dialog-save", "fs-all", "path-all"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+regex = "1.10"
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.11", features = ["stream"] }
+zip = "0.6"
+anyhow = "1.0"
+thiserror = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+lazy_static = "1.4"
+dirs = "5.0"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
