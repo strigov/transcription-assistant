@@ -1,9 +1,9 @@
 import './styles/main.css';
 
 // Add loading indicator
-console.log('Loading Transcription Assistant...');
+console.log('Загрузка Помощника транскрипции...');
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM loaded, starting app...');
+  console.log('DOM загружен, запуск приложения...');
   initApp();
 });
 
@@ -13,12 +13,12 @@ async function initApp() {
     const { open } = await import('@tauri-apps/api/dialog');
     const { listen } = await import('@tauri-apps/api/event');
     
-    console.log('Tauri APIs loaded successfully');
+    console.log('API Tauri успешно загружены');
     const app = new TranscriptionAssistant(invoke, open, listen);
     (window as any).app = app;
   } catch (error) {
-    console.error('Failed to load Tauri APIs:', error);
-    alert('Error loading application: ' + error);
+    console.error('Не удалось загрузить API Tauri:', error);
+    alert('Ошибка загрузки приложения: ' + error);
   }
 }
 
@@ -51,8 +51,8 @@ class TranscriptionAssistant {
     mergeBtn.addEventListener('click', this.mergeTranscriptions.bind(this));
     exportBtn.addEventListener('click', this.exportResults.bind(this));
 
-    // Temporarily disable drag & drop until Tauri integration is fixed
-    // TODO: Implement proper Tauri file drop events
+    // Временно отключено перетаскивание до исправления интеграции с Tauri
+    // TODO: Реализовать корректные события перетаскивания файлов в Tauri
   }
 
   private async setupTauriEventListeners() {
@@ -70,7 +70,7 @@ class TranscriptionAssistant {
       const selected = await this.open({
         multiple: false,
         filters: [{
-          name: 'Media Files',
+          name: 'Медиа файлы',
           extensions: ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv', 'mp3', 'wav', 'aac', 'flac', 'ogg', 'm4a', 'wma', 'opus']
         }]
       });
@@ -81,7 +81,7 @@ class TranscriptionAssistant {
         (document.getElementById('startProcessingBtn') as HTMLButtonElement).disabled = false;
       }
     } catch (error) {
-      console.error('Error selecting file:', error);
+      console.error('Ошибка выбора файла:', error);
     }
   }
 
@@ -98,7 +98,7 @@ class TranscriptionAssistant {
       fileSize.textContent = (fileInfo as any).size;
       fileInfoDiv.style.display = 'block';
     } catch (error) {
-      console.error('Error getting file info:', error);
+      console.error('Ошибка получения информации о файле:', error);
     }
   }
 
@@ -118,7 +118,7 @@ class TranscriptionAssistant {
         useSilenceDetection
       });
     } catch (error) {
-      console.error('Error starting processing:', error);
+      console.error('Ошибка запуска обработки:', error);
       (document.getElementById('startProcessingBtn') as HTMLButtonElement).disabled = false;
     }
   }
@@ -132,11 +132,11 @@ class TranscriptionAssistant {
   }
 
   private onProcessingComplete(result: any) {
-    console.log('Processing complete:', result);
-    this.updateProgress(100, 'Processing complete!');
+    console.log('Обработка завершена:', result);
+    this.updateProgress(100, 'Обработка завершена!');
     (document.getElementById('startProcessingBtn') as HTMLButtonElement).disabled = false;
     
-    // Show results section and display processed segments
+    // Показать раздел результатов и отобразить обработанные сегменты
     document.getElementById('resultsSection')!.style.display = 'block';
     this.displayProcessingResults(result);
   }
@@ -150,7 +150,7 @@ class TranscriptionAssistant {
       segmentsContainer.className = 'segments-container';
       
       const title = document.createElement('h3');
-      title.textContent = `✅ Created ${result.segments.length} audio segments:`;
+      title.textContent = `✅ Создано ${result.segments.length} аудио сегментов:`;
       segmentsContainer.appendChild(title);
 
       result.segments.forEach((segment: any, index: number) => {
@@ -159,12 +159,12 @@ class TranscriptionAssistant {
         segmentItem.innerHTML = `
           <div class="segment-info">
             <strong>Segment ${index + 1}</strong>
-            <span class="segment-duration">${segment.duration || 'Unknown duration'}</span>
-            <span class="segment-path">${segment.path || 'Unknown path'}</span>
+            <span class="segment-duration">${segment.duration || 'Длительность неизвестна'}</span>
+            <span class="segment-path">${segment.path || 'Путь неизвестен'}</span>
           </div>
           <div class="segment-actions">
-            <button onclick="navigator.clipboard.writeText('${segment.path}')">📋 Copy Path</button>
-            <button onclick="app.openFolder('${segment.path}')">📁 Open Folder</button>
+            <button onclick="navigator.clipboard.writeText('${segment.path}')">📋 Копировать путь</button>
+            <button onclick="app.openFolder('${segment.path}')">📁 Открыть папку</button>
           </div>
         `;
         segmentsContainer.appendChild(segmentItem);
@@ -172,7 +172,7 @@ class TranscriptionAssistant {
 
       resultsDiv.appendChild(segmentsContainer);
     } else {
-      resultsDiv.innerHTML = '<p>❌ No segments were created. Please check the processing logs.</p>';
+      resultsDiv.innerHTML = '<p>❌ Сегменты не были созданы. Проверьте логи обработки.</p>';
     }
   }
 
@@ -181,7 +181,7 @@ class TranscriptionAssistant {
       const selected = await this.open({
         multiple: true,
         filters: [{
-          name: 'Text Files',
+          name: 'Текстовые файлы',
           extensions: ['txt', 'srt', 'md']
         }]
       });
@@ -192,7 +192,7 @@ class TranscriptionAssistant {
         (document.getElementById('mergeBtn') as HTMLButtonElement).disabled = false;
       }
     } catch (error) {
-      console.error('Error selecting transcription files:', error);
+      console.error('Ошибка выбора файлов транскрипции:', error);
     }
   }
 
@@ -205,7 +205,7 @@ class TranscriptionAssistant {
       fileItem.className = 'transcription-item';
       fileItem.innerHTML = `
         <span>${file.split('/').pop()}</span>
-        <button onclick="app.removeTranscriptionFile(${index})">Remove</button>
+        <button onclick="app.removeTranscriptionFile(${index})">Удалить</button>
       `;
       listElement.appendChild(fileItem);
     });
@@ -219,14 +219,14 @@ class TranscriptionAssistant {
 
   public async openFolder(filePath: string) {
     try {
-      // Get the directory containing the file
+      // Получить каталог, содержащий файл
       const directory = filePath.substring(0, filePath.lastIndexOf('/'));
       await this.invoke('open_folder', { path: directory });
     } catch (error) {
-      console.error('Error opening folder:', error);
-      // Fallback: copy path to clipboard
+      console.error('Ошибка открытия папки:', error);
+      // Запасной вариант: копировать путь в буфер обмена
       navigator.clipboard.writeText(filePath);
-      alert('Could not open folder. File path copied to clipboard.');
+      alert('Не удалось открыть папку. Путь к файлу скопирован в буфер обмена.');
     }
   }
 
@@ -238,7 +238,7 @@ class TranscriptionAssistant {
     
     try {
       mergeBtn.disabled = true;
-      mergeBtn.textContent = '🔄 Merging...';
+      mergeBtn.textContent = '🔄 Объединяем...';
       
       const outputFormat = (document.getElementById('outputFormat') as HTMLSelectElement).value;
       
@@ -247,12 +247,12 @@ class TranscriptionAssistant {
         outputFormat
       });
 
-      console.log('Merge complete:', result);
-      mergeBtn.textContent = '✅ Merged!';
+      console.log('Объединение завершено:', result);
+      mergeBtn.textContent = '✅ Объединено!';
       (document.getElementById('exportBtn') as HTMLButtonElement).disabled = false;
       
-      // Show success message
-      this.showMergeStatus('✅ Transcriptions merged successfully! Ready for export.', 'success');
+      // Показать сообщение об успехе
+      this.showMergeStatus('✅ Транскрипции успешно объединены! Готово к экспорту.', 'success');
       
       setTimeout(() => {
         mergeBtn.textContent = originalText;
@@ -260,12 +260,12 @@ class TranscriptionAssistant {
       }, 2000);
       
     } catch (error) {
-      console.error('Error merging transcriptions:', error);
+      console.error('Ошибка объединения транскрипций:', error);
       mergeBtn.textContent = originalText;
       mergeBtn.disabled = false;
       
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      this.showMergeStatus(`❌ Error merging transcriptions: ${errorMessage}`, 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Произошла неизвестная ошибка';
+      this.showMergeStatus(`❌ Ошибка объединения транскрипций: ${errorMessage}`, 'error');
     }
   }
 
@@ -293,17 +293,17 @@ class TranscriptionAssistant {
     
     try {
       exportBtn.disabled = true;
-      exportBtn.textContent = '📤 Exporting...';
+      exportBtn.textContent = '📤 Экспортируем...';
       
       const result = await this.invoke('export_merged_transcription');
-      console.log('Export complete:', result);
+      console.log('Экспорт завершен:', result);
       
-      exportBtn.textContent = '✅ Exported!';
+      exportBtn.textContent = '✅ Экспортировано!';
       
-      // Show success message
+      // Показать сообщение об успехе
       const message = result?.path 
-        ? `✅ File exported successfully to: ${result.path}`
-        : '✅ Export completed successfully!';
+        ? `✅ Файл успешно экспортирован в: ${result.path}`
+        : '✅ Экспорт завершен успешно!';
       this.showExportStatus(message, 'success');
       
       setTimeout(() => {
@@ -312,12 +312,12 @@ class TranscriptionAssistant {
       }, 2000);
       
     } catch (error) {
-      console.error('Error exporting:', error);
+      console.error('Ошибка экспорта:', error);
       exportBtn.textContent = originalText;
       exportBtn.disabled = false;
       
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      this.showExportStatus(`❌ Error exporting file: ${errorMessage}`, 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Произошла неизвестная ошибка';
+      this.showExportStatus(`❌ Ошибка экспорта файла: ${errorMessage}`, 'error');
     }
   }
 
@@ -360,22 +360,22 @@ class TranscriptionAssistant {
     const files = e.dataTransfer!.files;
     if (files.length > 0) {
       const file = files[0];
-      console.log('Dropped file:', file.name);
+      console.log('Перетащенный файл:', file.name);
       
       try {
-        // In Tauri, dropped files should provide file paths through file.path
+        // В Tauri перетащенные файлы должны предоставлять пути к файлам через file.path
         const filePath = (file as any).path;
         if (filePath) {
           this.selectedFile = filePath;
           await this.displayFileInfo(filePath);
           (document.getElementById('startProcessingBtn') as HTMLButtonElement).disabled = false;
         } else {
-          console.error('Could not get file path from dropped file');
-          alert('Error: Could not get file path. Please try using the "Select File" button instead.');
+          console.error('Не удалось получить путь к перетащенному файлу');
+          alert('Ошибка: Не удалось получить путь к файлу. Попробуйте использовать кнопку "Выбрать файл".');
         }
       } catch (error) {
-        console.error('Error handling dropped file:', error);
-        alert('Error handling dropped file: ' + error);
+        console.error('Ошибка обработки перетащенного файла:', error);
+        alert('Ошибка обработки перетащенного файла: ' + error);
       }
     }
   }
@@ -396,7 +396,7 @@ class TranscriptionAssistant {
           if (filePath) {
             filePaths.push(filePath);
           } else {
-            console.warn(`Could not get path for file: ${file.name}`);
+            console.warn(`Не удалось получить путь к файлу: ${file.name}`);
           }
         }
       }
@@ -406,11 +406,11 @@ class TranscriptionAssistant {
         this.displayTranscriptionFiles();
         (document.getElementById('mergeBtn') as HTMLButtonElement).disabled = false;
       } else if (files.length > 0) {
-        alert('Could not get file paths from dropped files. Please try using the "Select Files" button instead.');
+        alert('Не удалось получить пути к перетащенным файлам. Попробуйте использовать кнопку "Выбрать файлы".');
       }
     } catch (error) {
-      console.error('Error handling dropped transcription files:', error);
-      alert('Error handling dropped files: ' + error);
+      console.error('Ошибка обработки перетащенных файлов транскрипции:', error);
+      alert('Ошибка обработки перетащенных файлов: ' + error);
     }
   }
 }

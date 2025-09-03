@@ -1,82 +1,82 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Transcription Assistant</title>
+  <title>Помощник транскрипции</title>
 </head>
 
 <body>
   <div id="app">
     <main class="container">
       <header>
-        <h1>🎙️ Transcription Assistant</h1>
-        <p>Split audio/video files and merge transcribed text with proper timestamp synchronization</p>
+        <h1>🎙️ Помощник транскрипции</h1>
+        <p>Разделяйте аудио/видео файлы и объединяйте транскрибированный текст с синхронизацией временных меток</p>
       </header>
 
       <div class="workspace">
         <section class="file-input-section">
-          <h2>📁 Input File</h2>
+          <h2>📁 Входной файл</h2>
           <div class="file-drop-zone" id="fileDropZone">
-            <p>Drop your audio/video file here</p>
-            <button id="selectFileBtn">Select File</button>
+            <p>Перетащите сюда ваш аудио/видео файл</p>
+            <button id="selectFileBtn">Выбрать файл</button>
           </div>
           <div class="file-info" id="fileInfo" style="display: none;">
-            <p><strong>File:</strong> <span id="fileName"></span></p>
-            <p><strong>Duration:</strong> <span id="fileDuration"></span></p>
-            <p><strong>Size:</strong> <span id="fileSize"></span></p>
+            <p><strong>Файл:</strong> <span id="fileName"></span></p>
+            <p><strong>Длительность:</strong> <span id="fileDuration"></span></p>
+            <p><strong>Размер:</strong> <span id="fileSize"></span></p>
           </div>
         </section>
 
         <section class="processing-section">
-          <h2>⚙️ Processing Options</h2>
+          <h2>⚙️ Параметры обработки</h2>
           <div class="options">
             <label>
-              <span>Max segment duration (minutes):</span>
+              <span>Максимальная длительность сегмента (минуты):</span>
               <input type="number" id="maxDuration" value="30" min="1" max="60">
             </label>
             <label>
               <input type="checkbox" id="silenceDetection" checked>
-              <span>Use silence detection for smart splitting</span>
+              <span>Использовать определение тишины для умного разделения</span>
             </label>
           </div>
-          <button id="startProcessingBtn" disabled>🔄 Start Processing</button>
+          <button id="startProcessingBtn" disabled>🔄 Начать обработку</button>
         </section>
 
         <section class="progress-section" id="progressSection" style="display: none;">
-          <h2>📊 Progress</h2>
+          <h2>📊 Прогресс</h2>
           <div class="progress-bar">
             <div class="progress-fill" id="progressFill"></div>
           </div>
-          <p id="progressText">Preparing...</p>
+          <p id="progressText">Подготовка...</p>
         </section>
 
         <section class="results-section" id="resultsSection" style="display: none;">
-          <h2>✅ Processing Results</h2>
+          <h2>✅ Результаты обработки</h2>
           <div id="processingResults"></div>
         </section>
 
         <section class="merge-section">
-          <h2>📝 Merge Transcriptions</h2>
+          <h2>📝 Объединение транскрипций</h2>
           <div class="file-drop-zone" id="transcriptionDropZone">
-            <p>Drop your transcribed text files here</p>
-            <button id="selectTranscriptionBtn">Select Files</button>
+            <p>Перетащите сюда файлы с транскрипциями</p>
+            <button id="selectTranscriptionBtn">Выбрать файлы</button>
           </div>
           <div class="transcription-list" id="transcriptionList"></div>
-          <button id="mergeBtn" disabled>🔗 Merge Transcriptions</button>
+          <button id="mergeBtn" disabled>🔗 Объединить транскрипции</button>
         </section>
 
         <section class="output-section">
-          <h2>💾 Output</h2>
+          <h2>💾 Экспорт</h2>
           <div class="output-controls">
             <select id="outputFormat">
-              <option value="txt">Plain Text (.txt)</option>
-              <option value="srt">Subtitle (.srt)</option>
+              <option value="txt">Обычный текст (.txt)</option>
+              <option value="srt">Субтитры (.srt)</option>
               <option value="md">Markdown (.md)</option>
             </select>
-            <button id="exportBtn" disabled>💾 Export</button>
+            <button id="exportBtn" disabled>💾 Экспорт</button>
           </div>
         </section>
       </div>
