@@ -207,8 +207,25 @@ impl TranscriptionMerger {
     fn parse_txt(&self, content: &str, filename: &str) -> Result<Vec<TranscriptionSegment>> {
         let mut segments = Vec::new();
         
-        // Try to find timestamps in the text
-        let timestamp_regex = Regex::new(r"\[(\d{1,2}):(\d{2}):(\d{2}(?:\.\d{1,3})?)\]|(\d{1,2}):(\d{2}):(\d{2}(?:\.\d{1,3})?)").unwrap();
+        // Multiple regex patterns for different timecode formats
+        let patterns = [
+            // [HH:MM:SS.mmm] format - full precision with brackets
+            r"\[(\d{1,2}):(\d{2}):(\d{2})(?:[\.,](\d{1,3}))?\]",
+            // [MM:SS] format - minutes:seconds with brackets  
+            r"\[(\d{1,2}):(\d{2})\]",
+            // HH:MM:SS.mmm format - full precision without brackets
+            r"^(\d{1,2}):(\d{2}):(\d{2})(?:[\.,](\d{1,3}))?(?:\s|$)",
+            // MM:SS format - minutes:seconds without brackets
+            r"^(\d{1,2}):(\d{2})(?:\s|$)",
+            // Whisper format: [HH:MM:SS.mmm --> HH:MM:SS.mmm] (extract start time)
+            r"\[(\d{1,2}):(\d{2}):(\d{2})(?:[\.,](\d{1,3}))?\s*-->\s*\d{1,2}:\d{2}:\d{2}(?:[\.,]\d{1,3})?\]",
+            // Simple seconds format: [123] or 123
+            r"\[?(\d+)\]?",
+        ];
+
+        let regexes: Vec<Regex> = patterns.iter()
+            .filter_map(|pattern| Regex::new(pattern).ok())
+            .collect();
         
         let lines: Vec<&str> = content.lines().collect();
         let mut current_time = 0.0;
@@ -223,39 +240,94 @@ impl TranscriptionMerger {
             let mut segment_start_time = current_time;
             let mut text = line.to_string();
 
-            // Check if line contains timestamp
-            if let Some(captures) = timestamp_regex.captures(line) {
-                if let Some(h) = captures.get(1) {
-                    // Format: [HH:MM:SS.mmm]
-                    let hours: f64 = h.as_str().parse().unwrap_or(0.0);
-                    let minutes: f64 = captures.get(2).unwrap().as_str().parse().unwrap_or(0.0);
-                    let seconds: f64 = captures.get(3).unwrap().as_str().parse().unwrap_or(0.0);
-                    segment_start_time = hours * 3600.0 + minutes * 60.0 + seconds;
-                    current_time = segment_start_time;
-                    
-                    // Remove timestamp from text
-                    text = timestamp_regex.replace(&text, "").trim().to_string();
-                } else if let Some(h) = captures.get(4) {
-                    // Format: HH:MM:SS.mmm (without brackets)
-                    let hours: f64 = h.as_str().parse().unwrap_or(0.0);
-                    let minutes: f64 = captures.get(5).unwrap().as_str().parse().unwrap_or(0.0);
-                    let seconds: f64 = captures.get(6).unwrap().as_str().parse().unwrap_or(0.0);
-                    segment_start_time = hours * 3600.0 + minutes * 60.0 + seconds;
-                    current_time = segment_start_time;
-                    
-                    text = timestamp_regex.replace(&text, "").trim().to_string();
+            let mut found_timestamp = false;
+
+            // Try each regex pattern
+            for regex in &regexes {
+                if let Some(captures) = regex.captures(line) {
+                    let parsed_time = match captures.len() {
+                        2 => {
+                            // Single number (seconds or MM:SS without hours)
+                            if let Ok(seconds) = captures.get(1).unwrap().as_str().parse::<f64>() {
+                                if seconds < 3600.0 {
+                                    // If less than 3600, treat as seconds
+                                    seconds
+                                } else {
+                                    // If larger, might be MM:SS format (first capture is minutes)
+                                    current_time
+                                }
+                            } else {
+                                current_time
+                            }
+                        },
+                        3 => {
+                            // MM:SS format
+                            let minutes: f64 = captures.get(1).unwrap().as_str().parse().unwrap_or(0.0);
+                            let seconds: f64 = captures.get(2).unwrap().as_str().parse().unwrap_or(0.0);
+                            minutes * 60.0 + seconds
+                        },
+                        4 => {
+                            // HH:MM:SS format
+                            let hours: f64 = captures.get(1).unwrap().as_str().parse().unwrap_or(0.0);
+                            let minutes: f64 = captures.get(2).unwrap().as_str().parse().unwrap_or(0.0);
+                            let seconds: f64 = captures.get(3).unwrap().as_str().parse().unwrap_or(0.0);
+                            hours * 3600.0 + minutes * 60.0 + seconds
+                        },
+                        5 => {
+                            // HH:MM:SS.mmm format with milliseconds
+                            let hours: f64 = captures.get(1).unwrap().as_str().parse().unwrap_or(0.0);
+                            let minutes: f64 = captures.get(2).unwrap().as_str().parse().unwrap_or(0.0);
+                            let seconds: f64 = captures.get(3).unwrap().as_str().parse().unwrap_or(0.0);
+                            let millis: f64 = captures.get(4)
+                                .map(|m| m.as_str().parse().unwrap_or(0.0))
+                                .unwrap_or(0.0) / 1000.0;
+                            hours * 3600.0 + minutes * 60.0 + seconds + millis
+                        },
+                        _ => current_time
+                    };
+
+                    // Only update if we got a valid timestamp
+                    if parsed_time >= 0.0 {
+                        segment_start_time = parsed_time;
+                        current_time = segment_start_time;
+                        
+                        // Remove the matched timestamp from text
+                        text = regex.replace(&text, "").trim().to_string();
+                        found_timestamp = true;
+                        break; // Stop trying other patterns
+                    }
                 }
+            }
+
+            // Clean up text further - remove speaker names in format "Name:" at beginning
+            text = text.trim_start_matches(':').trim().to_string();
+            if text.ends_with(':') && text.split_whitespace().count() == 1 {
+                // If text is just "Name:", skip this line
+                continue;
             }
 
             if !text.is_empty() {
                 // Estimate duration based on word count
                 let word_count = text.split_whitespace().count();
-                let estimated_duration = (word_count as f64 / average_read_speed) * 60.0;
-                current_time += estimated_duration.max(1.0);
+                let estimated_duration = if found_timestamp {
+                    // If we found a timestamp, use word-based estimation
+                    (word_count as f64 / average_read_speed) * 60.0
+                } else {
+                    // If no timestamp, use sequential timing
+                    (word_count as f64 / average_read_speed) * 60.0
+                };
+                
+                if !found_timestamp {
+                    current_time += estimated_duration.max(1.0);
+                }
 
                 segments.push(TranscriptionSegment {
                     start_time: segment_start_time,
-                    end_time: Some(current_time),
+                    end_time: Some(if found_timestamp { 
+                        segment_start_time + estimated_duration.max(1.0) 
+                    } else { 
+                        current_time 
+                    }),
                     text,
                     file_index: index,
                     original_filename: filename.to_string(),

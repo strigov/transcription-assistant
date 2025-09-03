@@ -28,6 +28,7 @@ class TranscriptionAssistant {
   private invoke: any;
   private open: any;
   private listen: any;
+  private lastOutputPath: string | null = null;
 
   constructor(invoke: any, open: any, listen: any) {
     this.invoke = invoke;
@@ -43,6 +44,8 @@ class TranscriptionAssistant {
     const selectTranscriptionBtn = document.getElementById('selectTranscriptionBtn')!;
     const mergeBtn = document.getElementById('mergeBtn')!;
     const exportBtn = document.getElementById('exportBtn')!;
+    const selectOutputPathBtn = document.getElementById('selectOutputPathBtn')!;
+    const timecodeFormat = document.getElementById('timecodeFormat') as HTMLSelectElement;
     const fileDropZone = document.getElementById('fileDropZone')!;
 
     selectFileBtn.addEventListener('click', this.selectFile.bind(this));
@@ -50,6 +53,8 @@ class TranscriptionAssistant {
     selectTranscriptionBtn.addEventListener('click', this.selectTranscriptionFiles.bind(this));
     mergeBtn.addEventListener('click', this.mergeTranscriptions.bind(this));
     exportBtn.addEventListener('click', this.exportResults.bind(this));
+    selectOutputPathBtn.addEventListener('click', this.selectOutputPath.bind(this));
+    timecodeFormat.addEventListener('change', this.handleTimecodeFormatChange.bind(this));
 
     // Временно отключено перетаскивание до исправления интеграции с Tauri
     // TODO: Реализовать корректные события перетаскивания файлов в Tauri
@@ -189,10 +194,51 @@ class TranscriptionAssistant {
       if (selected && Array.isArray(selected)) {
         this.transcriptionFiles = selected;
         this.displayTranscriptionFiles();
+        this.setDefaultOutputPath();
         (document.getElementById('mergeBtn') as HTMLButtonElement).disabled = false;
       }
     } catch (error) {
       console.error('Ошибка выбора файлов транскрипции:', error);
+    }
+  }
+
+  private setDefaultOutputPath() {
+    if (this.transcriptionFiles.length > 0) {
+      const firstFilePath = this.transcriptionFiles[0];
+      const directory = firstFilePath.substring(0, firstFilePath.lastIndexOf('/'));
+      const outputPathInput = document.getElementById('outputPath') as HTMLInputElement;
+      if (!this.lastOutputPath) {
+        outputPathInput.value = directory;
+      }
+    }
+  }
+
+  private async selectOutputPath() {
+    try {
+      const selected = await this.open({
+        directory: true,
+        multiple: false,
+        defaultPath: this.lastOutputPath || undefined
+      });
+
+      if (selected && typeof selected === 'string') {
+        this.lastOutputPath = selected;
+        const outputPathInput = document.getElementById('outputPath') as HTMLInputElement;
+        outputPathInput.value = selected;
+      }
+    } catch (error) {
+      console.error('Ошибка выбора папки:', error);
+    }
+  }
+
+  private handleTimecodeFormatChange() {
+    const timecodeFormat = document.getElementById('timecodeFormat') as HTMLSelectElement;
+    const customGroup = document.getElementById('customTimecodeGroup')!;
+    
+    if (timecodeFormat.value === 'custom') {
+      customGroup.style.display = 'block';
+    } else {
+      customGroup.style.display = 'none';
     }
   }
 
@@ -289,13 +335,38 @@ class TranscriptionAssistant {
 
   private async exportResults() {
     const exportBtn = document.getElementById('exportBtn') as HTMLButtonElement;
+    const outputPathInput = document.getElementById('outputPath') as HTMLInputElement;
+    const outputFileNameInput = document.getElementById('outputFileName') as HTMLInputElement;
+    const outputFormatSelect = document.getElementById('outputFormat') as HTMLSelectElement;
+    const timecodeFormatSelect = document.getElementById('timecodeFormat') as HTMLSelectElement;
+    const customTimecodeFormatInput = document.getElementById('customTimecodeFormat') as HTMLInputElement;
+    const includeExtendedInfoCheckbox = document.getElementById('includeExtendedInfo') as HTMLInputElement;
+    
     const originalText = exportBtn.textContent;
+    
+    // Валидация
+    if (!outputPathInput.value.trim()) {
+      alert('Пожалуйста, выберите папку для сохранения');
+      return;
+    }
+    
+    if (!outputFileNameInput.value.trim()) {
+      alert('Пожалуйста, укажите имя файла');
+      return;
+    }
     
     try {
       exportBtn.disabled = true;
       exportBtn.textContent = '📤 Экспортируем...';
       
-      const result = await this.invoke('export_merged_transcription');
+      const result = await this.invoke('export_merged_transcription', {
+        outputPath: outputPathInput.value,
+        fileName: outputFileNameInput.value,
+        outputFormat: outputFormatSelect.value,
+        timecodeFormat: timecodeFormatSelect.value,
+        customTimecodeFormat: timecodeFormatSelect.value === 'custom' ? customTimecodeFormatInput.value : null,
+        includeExtendedInfo: includeExtendedInfoCheckbox.checked
+      });
       console.log('Экспорт завершен:', result);
       
       exportBtn.textContent = '✅ Экспортировано!';

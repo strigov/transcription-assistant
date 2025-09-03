@@ -5,14 +5,14 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Помощник транскрипции</title>
+  <title>Помощник в транскрибировании</title>
 </head>
 
 <body>
   <div id="app">
     <main class="container">
       <header>
-        <h1>🎙️ Помощник транскрипции</h1>
+        <h1>🎙️ Помощник в транскрибировании</h1>
         <p>Разделяйте аудио/видео файлы и объединяйте транскрибированный текст с синхронизацией временных меток</p>
       </header>
 
@@ -70,12 +70,67 @@
 
         <section class="output-section">
           <h2>💾 Экспорт</h2>
-          <div class="output-controls">
-            <select id="outputFormat">
-              <option value="txt">Обычный текст (.txt)</option>
-              <option value="srt">Субтитры (.srt)</option>
-              <option value="md">Markdown (.md)</option>
-            </select>
+          
+          <div class="export-path-section">
+            <label>
+              <span>Путь для сохранения:</span>
+              <div class="path-input-group">
+                <input type="text" id="outputPath" placeholder="Выберите папку для сохранения..." readonly>
+                <button id="selectOutputPathBtn">📁 Выбрать папку</button>
+              </div>
+            </label>
+            
+            <label>
+              <span>Имя файла:</span>
+              <input type="text" id="outputFileName" placeholder="merged_transcription" value="merged_transcription">
+            </label>
+          </div>
+
+          <div class="export-format-section">
+            <label>
+              <span>Формат файла:</span>
+              <select id="outputFormat">
+                <option value="txt">Обычный текст (.txt)</option>
+                <option value="srt">Субтитры (.srt)</option>
+                <option value="md">Markdown (.md)</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="timecode-format-section">
+            <label>
+              <span>Формат таймкодов:</span>
+              <select id="timecodeFormat">
+                <option value="hms">ЧЧ:ММ:СС (00:05:30)</option>
+                <option value="hms_ms">ЧЧ:ММ:СС.МС (00:05:30.500)</option>
+                <option value="seconds">Секунды (330)</option>
+                <option value="seconds_ms">Секунды.МС (330.5)</option>
+                <option value="custom">Пользовательский формат</option>
+              </select>
+            </label>
+            
+            <div id="customTimecodeGroup" style="display: none;">
+              <label>
+                <span>Пользовательский формат:</span>
+                <input type="text" id="customTimecodeFormat" placeholder="HH:MM:SS" 
+                       title="H=часы, M=минуты, S=секунды, MS=миллисекунды">
+                <small class="format-help">Используйте: HH=часы, MM=минуты, SS=секунды, MS=миллисекунды</small>
+              </label>
+            </div>
+          </div>
+
+          <div class="advanced-options-section">
+            <label class="checkbox-label">
+              <input type="checkbox" id="includeExtendedInfo">
+              <span>Включить расширенную информацию</span>
+              <small class="option-description">
+                Добавляет перед каждым таймкодом информацию о источнике: 
+                [имя_файла.ext оригинальный_таймкод]
+              </small>
+            </label>
+          </div>
+
+          <div class="export-actions">
             <button id="exportBtn" disabled>💾 Экспорт</button>
           </div>
         </section>
