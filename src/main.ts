@@ -1,4 +1,3 @@
-import './styles/main.css';
 
 // Add loading indicator
 console.log('Загрузка Помощника транскрипции...');
@@ -250,55 +249,73 @@ class TranscriptionAssistant {
 
     this.transcriptionFiles.forEach((file, index) => {
       const fileItem = document.createElement('div');
-      fileItem.className = 'transcription-item';
+      fileItem.className = 'file-item';
       
-      // Create content div
-      const contentDiv = document.createElement('div');
-      contentDiv.className = 'transcription-item-content';
+      // Create info container
+      const fileInfo = document.createElement('div');
+      fileInfo.className = 'file-item-info';
       
-      // Create file name span
+      // Create order number
+      const orderDiv = document.createElement('div');
+      orderDiv.className = 'file-item-order';
+      orderDiv.textContent = (index + 1).toString();
+      
+      // Create file name
       const fileName = document.createElement('span');
-      fileName.className = 'file-name';
+      fileName.className = 'file-item-name';
       fileName.textContent = file.split('/').pop() || '';
       
-      // Create order span
-      const fileOrder = document.createElement('span');
-      fileOrder.className = 'file-order';
-      fileOrder.textContent = `#${index + 1}`;
+      // Assemble info
+      fileInfo.appendChild(orderDiv);
+      fileInfo.appendChild(fileName);
       
-      // Create up/down buttons for manual reordering
+      // Create actions container
+      const actionsDiv = document.createElement('div');
+      actionsDiv.className = 'file-item-actions';
+      
+      // Create up button
       const upButton = document.createElement('button');
-      upButton.textContent = '↑';
-      upButton.className = 'reorder-btn';
+      upButton.className = 'icon-btn';
       upButton.onclick = () => this.moveFileUp(index);
       upButton.disabled = index === 0;
       upButton.title = 'Переместить вверх';
+      upButton.innerHTML = `
+        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+        </svg>
+      `;
       
+      // Create down button
       const downButton = document.createElement('button');
-      downButton.textContent = '↓';
-      downButton.className = 'reorder-btn';
+      downButton.className = 'icon-btn';
       downButton.onclick = () => this.moveFileDown(index);
       downButton.disabled = index === this.transcriptionFiles.length - 1;
       downButton.title = 'Переместить вниз';
+      downButton.innerHTML = `
+        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      `;
       
       // Create delete button
       const deleteButton = document.createElement('button');
-      deleteButton.textContent = 'Удалить';
+      deleteButton.className = 'icon-btn';
       deleteButton.onclick = () => this.removeTranscriptionFile(index);
       deleteButton.title = 'Удалить файл';
+      deleteButton.innerHTML = `
+        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+        </svg>
+      `;
       
-      // Assemble the structure
-      contentDiv.appendChild(fileName);
-      contentDiv.appendChild(fileOrder);
+      // Assemble actions
+      actionsDiv.appendChild(upButton);
+      actionsDiv.appendChild(downButton);
+      actionsDiv.appendChild(deleteButton);
       
-      const buttonGroup = document.createElement('div');
-      buttonGroup.className = 'file-actions';
-      buttonGroup.appendChild(upButton);
-      buttonGroup.appendChild(downButton);
-      buttonGroup.appendChild(deleteButton);
-      
-      fileItem.appendChild(contentDiv);
-      fileItem.appendChild(buttonGroup);
+      // Assemble final item
+      fileItem.appendChild(fileInfo);
+      fileItem.appendChild(actionsDiv);
       
       listElement.appendChild(fileItem);
     });
@@ -394,16 +411,16 @@ class TranscriptionAssistant {
 
   private showMergeStatus(message: string, type: 'success' | 'error') {
     const statusDiv = document.createElement('div');
-    statusDiv.className = `merge-status ${type}`;
+    statusDiv.className = `status status-${type}`;
     statusDiv.textContent = message;
     
-    const mergeSection = document.querySelector('.merge-section');
-    const existingStatus = mergeSection?.querySelector('.merge-status');
+    const mergeCard = document.querySelector('.card:has(#transcriptionList)');
+    const existingStatus = mergeCard?.querySelector('.status');
     if (existingStatus) {
       existingStatus.remove();
     }
     
-    mergeSection?.appendChild(statusDiv);
+    mergeCard?.appendChild(statusDiv);
     
     setTimeout(() => {
       statusDiv.remove();
@@ -471,16 +488,16 @@ class TranscriptionAssistant {
 
   private showExportStatus(message: string, type: 'success' | 'error') {
     const statusDiv = document.createElement('div');
-    statusDiv.className = `export-status ${type}`;
+    statusDiv.className = `status status-${type}`;
     statusDiv.textContent = message;
     
-    const outputSection = document.querySelector('.output-section');
-    const existingStatus = outputSection?.querySelector('.export-status');
+    const exportCard = document.querySelector('.card:has(#exportBtn)');
+    const existingStatus = exportCard?.querySelector('.status');
     if (existingStatus) {
       existingStatus.remove();
     }
     
-    outputSection?.appendChild(statusDiv);
+    exportCard?.appendChild(statusDiv);
     
     setTimeout(() => {
       statusDiv.remove();

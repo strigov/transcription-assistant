@@ -1,147 +1,791 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Помощник в транскрибировании</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #141414;
+      --bg-card: #1a1a1a;
+      --bg-card-hover: #1f1f1f;
+      --border-color: #2a2a2a;
+      --border-hover: #3a3a3a;
+      --text-primary: #ffffff;
+      --text-secondary: #a3a3a3;
+      --text-muted: #737373;
+      --accent-primary: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-light: rgba(59, 130, 246, 0.1);
+      --success: #10b981;
+      --success-light: rgba(16, 185, 129, 0.1);
+      --danger: #ef4444;
+      --danger-light: rgba(239, 68, 68, 0.1);
+      --warning: #f59e0b;
+      --warning-light: rgba(245, 158, 11, 0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      min-height: 100vh;
+      padding: 24px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      margin-bottom: 48px;
+      text-align: center;
+      position: relative;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle, var(--accent-primary) 0%, transparent 70%);
+      filter: blur(60px);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+      position: relative;
+    }
+
+    .subtitle {
+      font-size: 1.125rem;
+      color: var(--text-muted);
+      position: relative;
+    }
+
+    /* Grid Layout */
+    .workspace {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 24px;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .card:hover::before {
+      opacity: 0.5;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      color: var(--accent-primary);
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    /* Drop Zone */
+    .drop-zone {
+      border: 2px dashed var(--border-hover);
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      background: var(--bg-secondary);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .drop-zone::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      background: var(--accent-light);
+      border-radius: 50%;
+      filter: blur(40px);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .drop-zone:hover::before {
+      opacity: 1;
+    }
+
+    .drop-zone:hover {
+      border-color: var(--accent-primary);
+      background: rgba(59, 130, 246, 0.05);
+    }
+
+    .drop-zone.active {
+      border-color: var(--accent-primary);
+      background: var(--accent-light);
+    }
+
+    .drop-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 16px;
+      opacity: 0.5;
+    }
+
+    .drop-text {
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s ease, height 0.6s ease;
+    }
+
+    .btn:active::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn-primary {
+      background: var(--accent-primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-hover);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Form Controls */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .form-input,
+    .form-select {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus,
+    .form-select:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+
+    .form-checkbox {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .form-checkbox input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--accent-primary);
+      cursor: pointer;
+      margin-top: 2px;
+    }
+
+    .form-checkbox-label {
+      flex: 1;
+    }
+
+    .form-checkbox-title {
+      color: var(--text-primary);
+      font-weight: 500;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .form-checkbox-desc {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+
+    /* Progress Bar */
+    .progress-container {
+      margin: 24px 0;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-hover));
+      border-radius: 4px;
+      transition: width 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .progress-text {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* File Info */
+    .file-info {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+
+    .file-info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .file-info-item:last-child {
+      border-bottom: none;
+    }
+
+    .file-info-label {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .file-info-value {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* File List */
+    .file-list {
+      margin: 20px 0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .file-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .file-list::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+      border-radius: 4px;
+    }
+
+    .file-list::-webkit-scrollbar-thumb {
+      background: var(--border-hover);
+      border-radius: 4px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .file-item:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .file-item-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .file-item-order {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-card);
+      border-radius: 8px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .file-item-name {
+      flex: 1;
+      color: var(--text-primary);
+    }
+
+    .file-item-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .icon-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    /* Status Messages */
+    .status {
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: slideIn 0.3s ease;
+    }
+
+    .status-success {
+      background: var(--success-light);
+      color: var(--success);
+      border: 1px solid var(--success);
+    }
+
+    .status-error {
+      background: var(--danger-light);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    .status-warning {
+      background: var(--warning-light);
+      color: var(--warning);
+      border: 1px solid var(--warning);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Icons */
+    .icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      body {
+        padding: 16px;
+      }
+      
+      .workspace {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+      
+      .card {
+        padding: 20px;
+      }
+    }
+  </style>
 </head>
-
 <body>
-  <div id="app">
-    <main class="container">
-      <header>
-        <h1>🎙️ Помощник в транскрибировании</h1>
-        <p>Разделяйте аудио/видео файлы и объединяйте транскрибированный текст с синхронизацией временных меток</p>
-      </header>
+  <div class="container">
+    <header>
+      <h1>Помощник в транскрибировании</h1>
+      <p class="subtitle">Разделяйте аудио/видео файлы и объединяйте транскрибированный текст с синхронизацией временных меток</p>
+    </header>
 
-      <div class="workspace">
-        <section class="file-input-section section-variant-1">
-          <h2>📁 Входной файл</h2>
-          <div class="file-drop-zone" id="fileDropZone">
-            <p>Перетащите сюда ваш аудио/видео файл</p>
-            <button id="selectFileBtn">Выбрать файл</button>
+    <div class="workspace">
+      <!-- Входной файл -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
           </div>
-          <div class="file-info" id="fileInfo" style="display: none;">
-            <p><strong>Файл:</strong> <span id="fileName"></span></p>
-            <p><strong>Длительность:</strong> <span id="fileDuration"></span></p>
-            <p><strong>Размер:</strong> <span id="fileSize"></span></p>
+          <h2 class="card-title">Входной файл</h2>
+        </div>
+        
+        <div class="drop-zone" id="fileDropZone">
+          <svg class="drop-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+          </svg>
+          <p class="drop-text">Перетащите сюда ваш аудио/видео файл</p>
+          <button class="btn btn-primary" id="selectFileBtn">Выбрать файл</button>
+        </div>
+        
+        <div class="file-info" id="fileInfo" style="display: none;">
+          <div class="file-info-item">
+            <span class="file-info-label">Файл</span>
+            <span class="file-info-value" id="fileName"></span>
           </div>
-        </section>
-
-        <section class="processing-section section-variant-2">
-          <h2>⚙️ Параметры обработки</h2>
-          <div class="options">
-            <label>
-              <span>Максимальная длительность сегмента (минуты):</span>
-              <input type="number" id="maxDuration" value="30" min="1" max="60">
-            </label>
-            <label>
-              <input type="checkbox" id="silenceDetection">
-              <span>Использовать определение тишины для умного разделения</span>
-            </label>
+          <div class="file-info-item">
+            <span class="file-info-label">Длительность</span>
+            <span class="file-info-value" id="fileDuration"></span>
           </div>
-          <button id="startProcessingBtn" disabled>🔄 Начать обработку</button>
-        </section>
-
-        <section class="progress-section section-variant-3" id="progressSection" style="display: none;">
-          <h2>📊 Прогресс</h2>
-          <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
+          <div class="file-info-item">
+            <span class="file-info-label">Размер</span>
+            <span class="file-info-value" id="fileSize"></span>
           </div>
-          <p id="progressText">Подготовка...</p>
-        </section>
-
-        <section class="results-section section-variant-4" id="resultsSection" style="display: none;">
-          <h2>✅ Результаты обработки</h2>
-          <div id="processingResults"></div>
-        </section>
-
-        <section class="merge-section section-variant-5">
-          <h2>📝 Объединение транскрипций</h2>
-          <div class="file-drop-zone" id="transcriptionDropZone">
-            <p>Перетащите сюда файлы с транскрипциями</p>
-            <button id="selectTranscriptionBtn">Выбрать файлы</button>
-          </div>
-          <div class="transcription-list" id="transcriptionList"></div>
-          <div class="transcription-actions">
-            <button id="clearAllBtn" disabled>🗑️ Очистить все</button>
-            <button id="mergeBtn" disabled>🔗 Объединить транскрипции</button>
-          </div>
-        </section>
-
-        <section class="output-section section-variant-6">
-          <h2>💾 Экспорт</h2>
-          
-          <div class="export-path-section">
-            <label>
-              <span>Путь для сохранения:</span>
-              <div class="path-input-group">
-                <input type="text" id="outputPath" placeholder="Выберите папку для сохранения..." readonly>
-                <button id="selectOutputPathBtn">📁 Выбрать папку</button>
-              </div>
-            </label>
-            
-            <label>
-              <span>Имя файла:</span>
-              <input type="text" id="outputFileName" placeholder="merged_transcription" value="merged_transcription">
-            </label>
-          </div>
-
-          <div class="export-format-section">
-            <label>
-              <span>Формат файла:</span>
-              <select id="outputFormat">
-                <option value="txt">Обычный текст (.txt)</option>
-                <option value="srt">Субтитры (.srt)</option>
-                <option value="md">Markdown (.md)</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="timecode-format-section">
-            <label>
-              <span>Формат таймкодов:</span>
-              <select id="timecodeFormat">
-                <option value="hms">ЧЧ:ММ:СС (00:05:30)</option>
-                <option value="hms_ms">ЧЧ:ММ:СС.МС (00:05:30.500)</option>
-                <option value="seconds">Секунды (330)</option>
-                <option value="seconds_ms">Секунды.МС (330.5)</option>
-                <option value="custom">Пользовательский формат</option>
-              </select>
-            </label>
-            
-            <div id="customTimecodeGroup" style="display: none;">
-              <label>
-                <span>Пользовательский формат:</span>
-                <input type="text" id="customTimecodeFormat" placeholder="HH:MM:SS" 
-                       title="H=часы, M=минуты, S=секунды, MS=миллисекунды">
-                <small class="format-help">Используйте: HH=часы, MM=минуты, SS=секунды, MS=миллисекунды</small>
-              </label>
-            </div>
-          </div>
-
-          <div class="advanced-options-section">
-            <label class="checkbox-label">
-              <input type="checkbox" id="includeExtendedInfo">
-              <span>Включить расширенную информацию</span>
-              <small class="option-description">
-                Добавляет перед каждым таймкодом информацию о источнике: 
-                [имя_файла.ext оригинальный_таймкод]
-              </small>
-            </label>
-          </div>
-
-          <div class="export-actions">
-            <button id="exportBtn" disabled>💾 Экспорт</button>
-          </div>
-        </section>
+        </div>
       </div>
-    </main>
+
+      <!-- Параметры обработки -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+          </div>
+          <h2 class="card-title">Параметры обработки</h2>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Максимальная длительность сегмента (минуты)</label>
+          <input type="number" class="form-input" id="maxDuration" value="30" min="1" max="60">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-checkbox">
+            <input type="checkbox" id="silenceDetection">
+            <div class="form-checkbox-label">
+              <span class="form-checkbox-title">Умное разделение</span>
+              <span class="form-checkbox-desc">Использовать определение тишины для оптимального разделения файла</span>
+            </div>
+          </label>
+        </div>
+        
+        <button class="btn btn-primary" id="startProcessingBtn" disabled>
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Начать обработку
+        </button>
+      </div>
+
+      <!-- Прогресс -->
+      <div class="card" id="progressSection" style="display: none;">
+        <div class="card-header">
+          <div class="card-icon">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+          </div>
+          <h2 class="card-title">Прогресс обработки</h2>
+        </div>
+        
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+          </div>
+          <p class="progress-text" id="progressText">Подготовка...</p>
+        </div>
+      </div>
+
+      <!-- Результаты -->
+      <div class="card" id="resultsSection" style="display: none;">
+        <div class="card-header">
+          <div class="card-icon">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <h2 class="card-title">Результаты обработки</h2>
+        </div>
+        <div id="processingResults"></div>
+      </div>
+
+      <!-- Объединение транскрипций -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+          </div>
+          <h2 class="card-title">Объединение транскрипций</h2>
+        </div>
+        
+        <div class="drop-zone" id="transcriptionDropZone">
+          <svg class="drop-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          <p class="drop-text">Перетащите сюда файлы с транскрипциями</p>
+          <button class="btn btn-primary" id="selectTranscriptionBtn">Выбрать файлы</button>
+        </div>
+        
+        <div class="file-list" id="transcriptionList"></div>
+        
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+          <button class="btn btn-secondary" id="clearAllBtn" disabled>
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+            Очистить все
+          </button>
+          <button class="btn btn-primary" id="mergeBtn" disabled>
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14v6m-3-3h6M6 10h2a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2zm10 0h2a2 2 0 002-2V6a2 2 0 00-2-2h-2a2 2 0 00-2 2v2a2 2 0 002 2zM6 20h2a2 2 0 002-2v-2a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2z"></path>
+            </svg>
+            Объединить транскрипции
+          </button>
+        </div>
+      </div>
+
+      <!-- Экспорт -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+          </div>
+          <h2 class="card-title">Экспорт</h2>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Путь для сохранения</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" class="form-input" id="outputPath" placeholder="Выберите папку..." readonly>
+            <button class="btn btn-secondary" id="selectOutputPathBtn">
+              <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Имя файла</label>
+          <input type="text" class="form-input" id="outputFileName" placeholder="merged_transcription" value="merged_transcription">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Формат файла</label>
+          <select class="form-select" id="outputFormat">
+            <option value="txt">Обычный текст (.txt)</option>
+            <option value="srt">Субтитры (.srt)</option>
+            <option value="md">Markdown (.md)</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Формат таймкодов</label>
+          <select class="form-select" id="timecodeFormat">
+            <option value="hms">ЧЧ:ММ:СС (00:05:30)</option>
+            <option value="hms_ms">ЧЧ:ММ:СС.МС (00:05:30.500)</option>
+            <option value="seconds">Секунды (330)</option>
+            <option value="seconds_ms">Секунды.МС (330.5)</option>
+            <option value="custom">Пользовательский формат</option>
+          </select>
+        </div>
+        
+        <div class="form-group" id="customTimecodeGroup" style="display: none;">
+          <label class="form-label">Пользовательский формат</label>
+          <input type="text" class="form-input" id="customTimecodeFormat" placeholder="HH:MM:SS">
+          <small style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; display: block;">
+            Используйте: HH=часы, MM=минуты, SS=секунды, MS=миллисекунды
+          </small>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-checkbox">
+            <input type="checkbox" id="includeExtendedInfo">
+            <div class="form-checkbox-label">
+              <span class="form-checkbox-title">Включить расширенную информацию</span>
+              <span class="form-checkbox-desc">Добавляет перед каждым таймкодом информацию о источнике: [имя_файла.ext оригинальный_таймкод]</span>
+            </div>
+          </label>
+        </div>
+        
+        <button class="btn btn-primary" id="exportBtn" disabled style="width: 100%;">
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          Экспортировать
+        </button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="/main.ts"></script>
 </body>
-
 </html>
