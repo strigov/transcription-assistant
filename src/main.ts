@@ -42,6 +42,7 @@ class TranscriptionAssistant {
     const selectFileBtn = document.getElementById('selectFileBtn')!;
     const startProcessingBtn = document.getElementById('startProcessingBtn')!;
     const selectTranscriptionBtn = document.getElementById('selectTranscriptionBtn')!;
+    const clearAllBtn = document.getElementById('clearAllBtn')!;
     const mergeBtn = document.getElementById('mergeBtn')!;
     const exportBtn = document.getElementById('exportBtn')!;
     const selectOutputPathBtn = document.getElementById('selectOutputPathBtn')!;
@@ -51,6 +52,7 @@ class TranscriptionAssistant {
     selectFileBtn.addEventListener('click', this.selectFile.bind(this));
     startProcessingBtn.addEventListener('click', this.startProcessing.bind(this));
     selectTranscriptionBtn.addEventListener('click', this.selectTranscriptionFiles.bind(this));
+    clearAllBtn.addEventListener('click', this.clearAllTranscriptions.bind(this));
     mergeBtn.addEventListener('click', this.mergeTranscriptions.bind(this));
     exportBtn.addEventListener('click', this.exportResults.bind(this));
     selectOutputPathBtn.addEventListener('click', this.selectOutputPath.bind(this));
@@ -249,18 +251,93 @@ class TranscriptionAssistant {
     this.transcriptionFiles.forEach((file, index) => {
       const fileItem = document.createElement('div');
       fileItem.className = 'transcription-item';
-      fileItem.innerHTML = `
-        <span>${file.split('/').pop()}</span>
-        <button onclick="app.removeTranscriptionFile(${index})">Удалить</button>
-      `;
+      
+      // Create content div
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'transcription-item-content';
+      
+      // Create file name span
+      const fileName = document.createElement('span');
+      fileName.className = 'file-name';
+      fileName.textContent = file.split('/').pop() || '';
+      
+      // Create order span
+      const fileOrder = document.createElement('span');
+      fileOrder.className = 'file-order';
+      fileOrder.textContent = `#${index + 1}`;
+      
+      // Create up/down buttons for manual reordering
+      const upButton = document.createElement('button');
+      upButton.textContent = '↑';
+      upButton.className = 'reorder-btn';
+      upButton.onclick = () => this.moveFileUp(index);
+      upButton.disabled = index === 0;
+      upButton.title = 'Переместить вверх';
+      
+      const downButton = document.createElement('button');
+      downButton.textContent = '↓';
+      downButton.className = 'reorder-btn';
+      downButton.onclick = () => this.moveFileDown(index);
+      downButton.disabled = index === this.transcriptionFiles.length - 1;
+      downButton.title = 'Переместить вниз';
+      
+      // Create delete button
+      const deleteButton = document.createElement('button');
+      deleteButton.textContent = 'Удалить';
+      deleteButton.onclick = () => this.removeTranscriptionFile(index);
+      deleteButton.title = 'Удалить файл';
+      
+      // Assemble the structure
+      contentDiv.appendChild(fileName);
+      contentDiv.appendChild(fileOrder);
+      
+      const buttonGroup = document.createElement('div');
+      buttonGroup.className = 'file-actions';
+      buttonGroup.appendChild(upButton);
+      buttonGroup.appendChild(downButton);
+      buttonGroup.appendChild(deleteButton);
+      
+      fileItem.appendChild(contentDiv);
+      fileItem.appendChild(buttonGroup);
+      
       listElement.appendChild(fileItem);
     });
+    
+    // Update button states
+    const clearAllBtn = document.getElementById('clearAllBtn') as HTMLButtonElement;
+    const mergeBtn = document.getElementById('mergeBtn') as HTMLButtonElement;
+    const hasFiles = this.transcriptionFiles.length > 0;
+    
+    clearAllBtn.disabled = !hasFiles;
+    mergeBtn.disabled = !hasFiles;
+  }
+
+  private moveFileUp(index: number) {
+    if (index > 0) {
+      const file = this.transcriptionFiles[index];
+      this.transcriptionFiles.splice(index, 1);
+      this.transcriptionFiles.splice(index - 1, 0, file);
+      this.displayTranscriptionFiles();
+    }
+  }
+
+  private moveFileDown(index: number) {
+    if (index < this.transcriptionFiles.length - 1) {
+      const file = this.transcriptionFiles[index];
+      this.transcriptionFiles.splice(index, 1);
+      this.transcriptionFiles.splice(index + 1, 0, file);
+      this.displayTranscriptionFiles();
+    }
   }
 
   public removeTranscriptionFile(index: number) {
     this.transcriptionFiles.splice(index, 1);
     this.displayTranscriptionFiles();
-    (document.getElementById('mergeBtn') as HTMLButtonElement).disabled = this.transcriptionFiles.length === 0;
+  }
+
+  public clearAllTranscriptions() {
+    this.transcriptionFiles = [];
+    this.displayTranscriptionFiles();
   }
 
   public async openFolder(filePath: string) {

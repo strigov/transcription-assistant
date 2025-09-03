@@ -17,7 +17,7 @@
       </header>
 
       <div class="workspace">
-        <section class="file-input-section">
+        <section class="file-input-section section-variant-1">
           <h2>📁 Входной файл</h2>
           <div class="file-drop-zone" id="fileDropZone">
             <p>Перетащите сюда ваш аудио/видео файл</p>
@@ -30,7 +30,7 @@
           </div>
         </section>
 
-        <section class="processing-section">
+        <section class="processing-section section-variant-2">
           <h2>⚙️ Параметры обработки</h2>
           <div class="options">
             <label>
@@ -38,14 +38,14 @@
               <input type="number" id="maxDuration" value="30" min="1" max="60">
             </label>
             <label>
-              <input type="checkbox" id="silenceDetection" checked>
+              <input type="checkbox" id="silenceDetection">
               <span>Использовать определение тишины для умного разделения</span>
             </label>
           </div>
           <button id="startProcessingBtn" disabled>🔄 Начать обработку</button>
         </section>
 
-        <section class="progress-section" id="progressSection" style="display: none;">
+        <section class="progress-section section-variant-3" id="progressSection" style="display: none;">
           <h2>📊 Прогресс</h2>
           <div class="progress-bar">
             <div class="progress-fill" id="progressFill"></div>
@@ -53,22 +53,25 @@
           <p id="progressText">Подготовка...</p>
         </section>
 
-        <section class="results-section" id="resultsSection" style="display: none;">
+        <section class="results-section section-variant-4" id="resultsSection" style="display: none;">
           <h2>✅ Результаты обработки</h2>
           <div id="processingResults"></div>
         </section>
 
-        <section class="merge-section">
+        <section class="merge-section section-variant-5">
           <h2>📝 Объединение транскрипций</h2>
           <div class="file-drop-zone" id="transcriptionDropZone">
             <p>Перетащите сюда файлы с транскрипциями</p>
             <button id="selectTranscriptionBtn">Выбрать файлы</button>
           </div>
           <div class="transcription-list" id="transcriptionList"></div>
-          <button id="mergeBtn" disabled>🔗 Объединить транскрипции</button>
+          <div class="transcription-actions">
+            <button id="clearAllBtn" disabled>🗑️ Очистить все</button>
+            <button id="mergeBtn" disabled>🔗 Объединить транскрипции</button>
+          </div>
         </section>
 
-        <section class="output-section">
+        <section class="output-section section-variant-6">
           <h2>💾 Экспорт</h2>
           
           <div class="export-path-section">
