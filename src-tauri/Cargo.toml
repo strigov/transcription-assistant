@@ -1,6 +1,6 @@
 [package]
 name = "transcription-assistant"
-version = "0.1.0"
+version = "0.2.0"
 description = "Desktop application for audio/video transcription workflow assistance"
 authors = ["Transcription Assistant Team"]
 license = "MIT"

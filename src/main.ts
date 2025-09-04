@@ -8,15 +8,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initApp() {
   try {
+    console.log('🚀 Starting app initialization...');
     const { invoke } = await import('@tauri-apps/api/tauri');
     const { open } = await import('@tauri-apps/api/dialog');
     const { listen } = await import('@tauri-apps/api/event');
     
-    console.log('API Tauri успешно загружены');
+    console.log('✅ API Tauri успешно загружены');
+    console.log('🏗️ Creating TranscriptionAssistant instance...');
     const app = new TranscriptionAssistant(invoke, open, listen);
     (window as any).app = app;
+    console.log('✅ App initialization complete');
   } catch (error) {
-    console.error('Не удалось загрузить API Tauri:', error);
+    console.error('❌ Не удалось загрузить API Tauri:', error);
     alert('Ошибка загрузки приложения: ' + error);
   }
 }
@@ -38,6 +41,8 @@ class TranscriptionAssistant {
   }
 
   private initializeEventListeners() {
+    console.log('🔧 Initializing event listeners...');
+    
     const selectFileBtn = document.getElementById('selectFileBtn')!;
     const startProcessingBtn = document.getElementById('startProcessingBtn')!;
     const selectTranscriptionBtn = document.getElementById('selectTranscriptionBtn')!;
@@ -47,6 +52,11 @@ class TranscriptionAssistant {
     const selectOutputPathBtn = document.getElementById('selectOutputPathBtn')!;
     const timecodeFormat = document.getElementById('timecodeFormat') as HTMLSelectElement;
     const fileDropZone = document.getElementById('fileDropZone')!;
+    const transcriptionDropZone = document.getElementById('transcriptionDropZone')!;
+
+    console.log('🔧 Elements found:');
+    console.log('- fileDropZone:', fileDropZone ? 'found' : 'NOT FOUND');
+    console.log('- transcriptionDropZone:', transcriptionDropZone ? 'found' : 'NOT FOUND');
 
     selectFileBtn.addEventListener('click', this.selectFile.bind(this));
     startProcessingBtn.addEventListener('click', this.startProcessing.bind(this));
@@ -57,8 +67,11 @@ class TranscriptionAssistant {
     selectOutputPathBtn.addEventListener('click', this.selectOutputPath.bind(this));
     timecodeFormat.addEventListener('change', this.handleTimecodeFormatChange.bind(this));
 
-    // Временно отключено перетаскивание до исправления интеграции с Tauri
-    // TODO: Реализовать корректные события перетаскивания файлов в Tauri
+    // Setup Tauri file drop listeners
+    console.log('🔧 Setting up Tauri file drop listeners...');
+    this.setupTauriFileDrop();
+    
+    console.log('✅ Event listeners initialization complete');
   }
 
   private async setupTauriEventListeners() {
@@ -504,78 +517,80 @@ class TranscriptionAssistant {
     }, 7000);
   }
 
-  private handleDragOver(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer!.dropEffect = 'copy';
-    (e.target as HTMLElement).style.backgroundColor = '#f0f4ff';
-  }
-
-  private handleDragLeave(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    (e.target as HTMLElement).style.backgroundColor = '';
-  }
-
-  private async handleFileDrop(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    (e.target as HTMLElement).style.backgroundColor = '';
+  private async setupTauriFileDrop() {
+    console.log('🔧 Setting up Tauri file drop...');
     
-    const files = e.dataTransfer!.files;
-    if (files.length > 0) {
-      const file = files[0];
-      console.log('Перетащенный файл:', file.name);
+    // Listen for file drop events from Tauri
+    await this.listen('tauri://file-drop', (event: any) => {
+      console.log('🎯 Tauri file drop event received!', event);
       
-      try {
-        // В Tauri перетащенные файлы должны предоставлять пути к файлам через file.path
-        const filePath = (file as any).path;
-        if (filePath) {
-          this.selectedFile = filePath;
-          await this.displayFileInfo(filePath);
-          (document.getElementById('startProcessingBtn') as HTMLButtonElement).disabled = false;
-        } else {
-          console.error('Не удалось получить путь к перетащенному файлу');
-          alert('Ошибка: Не удалось получить путь к файлу. Попробуйте использовать кнопку "Выбрать файл".');
-        }
-      } catch (error) {
-        console.error('Ошибка обработки перетащенного файла:', error);
-        alert('Ошибка обработки перетащенного файла: ' + error);
-      }
-    }
-  }
-
-  private async handleTranscriptionDrop(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    (e.target as HTMLElement).style.backgroundColor = '';
-    
-    const files = e.dataTransfer!.files;
-    const filePaths: string[] = [];
-    
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.name.endsWith('.txt') || file.name.endsWith('.srt') || file.name.endsWith('.md')) {
-          const filePath = (file as any).path;
-          if (filePath) {
-            filePaths.push(filePath);
-          } else {
-            console.warn(`Не удалось получить путь к файлу: ${file.name}`);
+      const files = event.payload as string[];
+      console.log('📁 Dropped files:', files);
+      
+      if (files && files.length > 0) {
+        // Process each file based on its extension
+        const mediaFiles: string[] = [];
+        const transcriptionFiles: string[] = [];
+        
+        files.forEach(filePath => {
+          const extension = filePath.split('.').pop()?.toLowerCase();
+          console.log('📋 Processing file:', filePath, 'extension:', extension);
+          
+          // Check if it's a media file
+          const mediaExtensions = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv', 'mp3', 'wav', 'aac', 'flac', 'ogg', 'm4a', 'wma', 'opus'];
+          const transcriptionExtensions = ['txt', 'srt', 'md'];
+          
+          if (mediaExtensions.includes(extension || '')) {
+            mediaFiles.push(filePath);
+          } else if (transcriptionExtensions.includes(extension || '')) {
+            transcriptionFiles.push(filePath);
           }
+        });
+        
+        // Handle media files
+        if (mediaFiles.length > 0) {
+          console.log('🎵 Processing media files:', mediaFiles);
+          this.handleMediaFiles(mediaFiles);
+        }
+        
+        // Handle transcription files  
+        if (transcriptionFiles.length > 0) {
+          console.log('📝 Processing transcription files:', transcriptionFiles);
+          this.handleTranscriptionFiles(transcriptionFiles);
+        }
+        
+        if (mediaFiles.length === 0 && transcriptionFiles.length === 0) {
+          alert('Пожалуйста, перетащите поддерживаемые файлы (медиа: MP4, MP3, WAV и др.; транскрипции: TXT, SRT, MD)');
         }
       }
+    });
+    
+    console.log('✅ Tauri file drop setup complete');
+  }
+
+
+  private handleMediaFiles(filePaths: string[]) {
+    console.log('🎵 Media file handler called with files:', filePaths.length);
+    
+    if (filePaths.length > 0) {
+      const filePath = filePaths[0]; // Take first file
+      console.log('🎵 Processing media file:', filePath);
       
-      if (filePaths.length > 0) {
-        this.transcriptionFiles = filePaths;
-        this.displayTranscriptionFiles();
-        (document.getElementById('mergeBtn') as HTMLButtonElement).disabled = false;
-      } else if (files.length > 0) {
-        alert('Не удалось получить пути к перетащенным файлам. Попробуйте использовать кнопку "Выбрать файлы".');
-      }
-    } catch (error) {
-      console.error('Ошибка обработки перетащенных файлов транскрипции:', error);
-      alert('Ошибка обработки перетащенных файлов: ' + error);
+      this.selectedFile = filePath;
+      this.displayFileInfo(filePath);
+      (document.getElementById('startProcessingBtn') as HTMLButtonElement).disabled = false;
     }
   }
+
+  private handleTranscriptionFiles(filePaths: string[]) {
+    console.log('📝 Transcription files handler called with files:', filePaths.length);
+    
+    if (filePaths.length > 0) {
+      this.transcriptionFiles = filePaths;
+      this.displayTranscriptionFiles();
+      this.setDefaultOutputPath();
+      (document.getElementById('mergeBtn') as HTMLButtonElement).disabled = false;
+    }
+  }
+
 }

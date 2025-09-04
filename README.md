@@ -1,4 +1,4 @@
-# 🎙️ Помощник в транскрибировании
+# ♫ Помощник в транскрибировании
 
 Мощное настольное приложение на базе Tauri, которое помогает разделять аудио/видео файлы на управляемые сегменты и объединять транскрибированные текстовые файлы с правильной синхронизацией временных меток.
 
@@ -6,29 +6,29 @@
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Tauri](https://img.shields.io/badge/Tauri-1.5+-orange)
 
-## ✨ Возможности
+## >>> Возможности
 
-### 🎵 Обработка аудио
+### ♫ Обработка аудио
 - **Умное разделение аудио**: Автоматическое разделение длинных аудио/видео файлов на сегменты
 - **Множество форматов**: Поддержка MP4, AVI, MOV, MKV, WebM, FLV, WMV, MP3, WAV, AAC, FLAC, OGG, M4A, WMA, OPUS
 - **Определение тишины**: Интеллектуальное разделение на основе детекции тишины для естественных пауз
 - **Разделение по времени**: Настраиваемая максимальная длительность сегмента (по умолчанию: 30 минут)
 - **Высокое качество**: MP3 сегменты с битрейтом 128k для оптимального баланса размера и качества
 
-### 📝 Управление транскрипциями
+### ≡ Управление транскрипциями
 - **Объединение файлов**: Комбинирование нескольких файлов транскрипций с правильной последовательностью
 - **Множество форматов**: Поддержка файлов TXT, SRT и Markdown
 - **Синхронизация временных меток**: Автоматический расчет смещений для плавного объединения
 - **Варианты экспорта**: Экспорт объединенных транскрипций в различных форматах
 
-### 🛠️ Пользовательский опыт
-- **Красивый интерфейс**: Современный, интуитивный интерфейс с отслеживанием прогресса
-- **Перетаскивание файлов**: Удобное управление файлами (скоро будет доступно)
+### ⚙ Пользовательский опыт
+- **Красивый интерфейс**: Современный темный интерфейс с отслеживанием прогресса
+- **Перетаскивание файлов**: Полная поддержка drag-and-drop для удобного управления файлами
 - **Локальная обработка**: Все операции выполняются локально для конфиденциальности
 - **Кроссплатформенность**: Поддержка Windows, macOS и Linux
 - **Доступ одним щелчком**: Открытие папок с результатами прямо из приложения
 
-## 🚀 Начало работы
+## >> Начало работы
 
 ### Требования
 - Node.js 16+ и npm/pnpm
@@ -61,17 +61,17 @@ npm run tauri:dev
 npm run tauri:build
 ```
 
-## 📖 Как использовать
+## || Как использовать
 
 ### 1. **Выберите аудио/видео файл**
-- Нажмите "Выбрать файл" или используйте перетаскивание
+- Нажмите "Выбрать файл" или перетащите файл в область загрузки
 - Поддерживаемые форматы: Большинство распространенных аудио/видео форматов
 - Информация о файле (длительность, размер) будет отображена
 
 ### 2. **Настройте обработку**
 - Установите максимальную длительность сегмента (1-60 минут)
 - Выберите между определением тишины или разделением по времени
-- Нажмите "🔄 Начать обработку"
+- Нажмите "▷ Начать обработку"
 
 ### 3. **Просмотрите результаты**
 - Просмотрите созданные аудио сегменты с подробностями
@@ -80,17 +80,17 @@ npm run tauri:build
 
 ### 4. **Объедините транскрипции**
 - Добавьте транскрибированные текстовые файлы (TXT, SRT, MD)
-- Нажмите "🔗 Объединить транскрипции"
+- Нажмите "⧉ Объединить транскрипции"
 - Файлы будут объединены с правильной последовательностью
 
 ### 5. **Экспорт**
-- Выберите формат вывода (TXT, SRT, MD)
-- Нажмите "💾 Экспорт" для сохранения объединенной транскрипции
+- Выберите формат вывода (TXT, SRT, MD)  
+- Нажмите "↗ Экспорт" для сохранения объединенной транскрипции
 - Файлы сохраняются в папку Документы с временной меткой
 
 ---
 
-# 🎙️ Transcription Assistant
+# ♫ Transcription Assistant
 
 A powerful desktop application built with Tauri that helps you split audio/video files into manageable chunks and merge transcribed text files with proper timestamp synchronization.
 
@@ -98,29 +98,29 @@ A powerful desktop application built with Tauri that helps you split audio/video
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Tauri](https://img.shields.io/badge/Tauri-1.5+-orange)
 
-## ✨ Features
+## >>> Features
 
-### 🎵 Audio Processing
+### ♫ Audio Processing
 - **Smart Audio Splitting**: Automatically split long audio/video files into chunks
 - **Multiple Formats**: Supports MP4, AVI, MOV, MKV, WebM, FLV, WMV, MP3, WAV, AAC, FLAC, OGG, M4A, WMA, OPUS
 - **Silence Detection**: Intelligent splitting based on silence detection for natural breaks
 - **Time-based Splitting**: Configurable maximum segment duration (default: 30 minutes)
 - **High-Quality Output**: MP3 segments with 128k bitrate for optimal size/quality balance
 
-### 📝 Transcription Management
+### ≡ Transcription Management
 - **File Merging**: Combine multiple transcription files with proper sequencing
 - **Multiple Formats**: Support for TXT, SRT, and Markdown files
 - **Timestamp Synchronization**: Automatic offset calculation for seamless merging
 - **Export Options**: Export merged transcriptions in various formats
 
-### 🛠️ User Experience
-- **Beautiful Interface**: Modern, intuitive UI with progress tracking
-- **Drag & Drop**: Easy file management (coming soon)
+### ⚙ User Experience
+- **Beautiful Interface**: Modern dark-themed UI with progress tracking
+- **Drag & Drop**: Full drag-and-drop support for easy file management
 - **Local Processing**: All operations performed locally for privacy
 - **Cross-Platform**: Windows, macOS, and Linux support
 - **One-Click Access**: Open output folders directly from the app
 
-## 🚀 Getting Started
+## >> Getting Started
 
 ### Prerequisites
 - Node.js 16+ and npm/pnpm
@@ -153,17 +153,17 @@ npm run tauri:dev
 npm run tauri:build
 ```
 
-## 📖 How to Use
+## || How to Use
 
 ### 1. **Select Audio/Video File**
-- Click "Select File" or use drag & drop
+- Click "Select File" or drag files into the drop zone
 - Supported formats: Most common audio/video formats
 - File info (duration, size) will be displayed
 
 ### 2. **Configure Processing**
 - Set maximum segment duration (1-60 minutes)
 - Choose between silence detection or time-based splitting
-- Click "🔄 Start Processing"
+- Click "▷ Start Processing"
 
 ### 3. **Review Results**
 - View created audio segments with details
@@ -172,12 +172,12 @@ npm run tauri:build
 
 ### 4. **Merge Transcriptions**
 - Add transcribed text files (TXT, SRT, MD)
-- Click "🔗 Merge Transcriptions"
+- Click "⧉ Merge Transcriptions"
 - Files will be combined with proper sequencing
 
 ### 5. **Export**
 - Choose output format (TXT, SRT, MD)
-- Click "💾 Export" to save merged transcription
+- Click "↗ Export" to save merged transcription
 - Files are saved to Documents folder with timestamp
 
 ## 🏗️ Architecture
@@ -254,19 +254,19 @@ We welcome contributions! Please feel free to submit a Pull Request.
 ### Reporting Issues
 Please use the [Issue Tracker](https://github.com/your-username/transcription-assistant/issues) to report bugs or request features.
 
-## 📋 Roadmap
+## >>> Roadmap
 
-- [ ] **v0.2.0**: Drag & drop file support
-- [ ] **v0.3.0**: Batch processing multiple files
-- [ ] **v0.4.0**: Built-in transcription with Whisper integration
-- [ ] **v0.5.0**: Cloud storage integration
-- [ ] **v1.0.0**: Plugin system for custom workflows
+- [x] **v0.1.1**: Drag & drop file support ✓
+- [ ] **v0.2.0**: Batch processing multiple files
+- [ ] **v0.3.0**: Built-in transcription with Whisper integration
+- [ ] **v0.4.0**: Cloud storage integration
+- [ ] **v0.5.0**: Plugin system for custom workflows
 
-## 🐛 Known Issues
+## !!! Known Issues
 
-- Drag & drop functionality is temporarily disabled (use Select File buttons)
 - Very long filenames may cause display issues
 - Some exotic audio formats may require manual FFmpeg installation
+- Backend audio processing functionality pending implementation
 
 ## 📄 License
 
@@ -294,19 +294,19 @@ If you find this project helpful, please consider giving it a ⭐ on GitHub!
 
 ## 🇷🇺 Русская документация
 
-### 📋 Дорожная карта
+### >>> Дорожная карта
 
-- [ ] **v0.2.0**: Поддержка перетаскивания файлов
-- [ ] **v0.3.0**: Пакетная обработка нескольких файлов  
-- [ ] **v0.4.0**: Встроенная транскрипция с интеграцией Whisper
-- [ ] **v0.5.0**: Интеграция с облачными хранилищами
-- [ ] **v1.0.0**: Система плагинов для пользовательских рабочих процессов
+- [x] **v0.1.1**: Поддержка перетаскивания файлов ✓
+- [ ] **v0.2.0**: Пакетная обработка нескольких файлов  
+- [ ] **v0.3.0**: Встроенная транскрипция с интеграцией Whisper
+- [ ] **v0.4.0**: Интеграция с облачными хранилищами
+- [ ] **v0.5.0**: Система плагинов для пользовательских рабочих процессов
 
-### 🐛 Известные проблемы
+### !!! Известные проблемы
 
-- Функция перетаскивания временно отключена (используйте кнопки выбора файлов)
 - Очень длинные имена файлов могут вызвать проблемы с отображением
 - Некоторые экзотические аудио форматы могут потребовать ручной установки FFmpeg
+- Функциональность обработки аудио в backend ожидает реализации
 
 ### 🤝 Вклад в проект
 

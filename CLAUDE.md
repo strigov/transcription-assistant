@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Tauri-based desktop application for audio/video transcription workflow assistance. The app splits audio/video files into manageable chunks and merges transcribed text files with proper timestamp synchronization.
 
-**Current Status**: Project has basic Tauri application structure with frontend UI and Rust backend configured. Core modules (FFmpeg integration, audio processing, transcription merging) are pending implementation.
+**Current Status**: Project has complete Tauri application structure with modern dark-themed frontend UI featuring working drag-and-drop file handling and Rust backend configured. Core modules (FFmpeg integration, audio processing, transcription merging) are pending implementation.
 
 ## Architecture
 
@@ -122,9 +122,9 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 
 ### Frontend Structure
 - **Main Application**: `src/main.ts` - TypeScript class-based architecture with `TranscriptionAssistant` class managing UI state and Tauri API interactions
-- **UI Components**: HTML5-based interface with sections for file input, processing options, progress tracking, transcription merging, and output export
+- **UI Components**: HTML5-based interface with modern dark theme, sections for file input, processing options, progress tracking, transcription merging, and output export
 - **Event System**: Uses Tauri's event system for real-time progress updates from Rust backend
-- **File Handling**: Supports drag-and-drop and file dialogs for media and transcription files
+- **File Handling**: Full drag-and-drop support via Tauri's native file drop API (`tauri://file-drop` events) and traditional file dialogs
 
 ### Backend Structure (Rust)
 - **Entry Point**: `src-tauri/src/main.rs` (not yet implemented)
@@ -136,6 +136,15 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 - `start_audio_processing(filePath, maxDuration, useSilenceDetection)`: Initiates audio splitting
 - `merge_transcriptions(files, outputFormat)`: Merges transcription files with timestamp sync
 - `export_merged_transcription()`: Exports final merged transcription
+
+### Drag-and-Drop Implementation
+- **Tauri Configuration**: `fileDropEnabled: true` in window config enables native file drop support
+- **Event Handler**: `tauri://file-drop` event listener processes dropped files with automatic type detection
+- **File Type Recognition**: Automatic sorting by extension (media files vs transcription files)
+- **Supported Extensions**:
+  - Media: mp4, avi, mov, mkv, webm, flv, wmv, mp3, wav, aac, flac, ogg, m4a, wma, opus
+  - Transcriptions: txt, srt, md
+- **UI Feedback**: Visual feedback and automatic interface updates when files are dropped
 
 ### Supported File Formats
 - **Media Input**: MP4, AVI, MOV, MKV, WebM, FLV, WMV, MP3, WAV, AAC, FLAC, OGG, M4A, WMA, OPUS
