@@ -5,6 +5,8 @@ use std::process::Command;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use zip::ZipArchive;
+use futures_util::StreamExt;
+use tauri::Window;
 
 pub struct FFmpegManager {
     ffmpeg_path: PathBuf,
@@ -37,8 +39,23 @@ impl FFmpegManager {
             return Ok(());
         }
 
-        // Download and install FFmpeg
-        self.download_ffmpeg().await?;
+        // Download and install FFmpeg without progress (for backward compatibility)
+        self.download_ffmpeg_internal(None).await?;
+        Ok(())
+    }
+
+    pub async fn ensure_ffmpeg_available_with_progress(&self, window: Option<Window>) -> Result<()> {
+        if self.is_ffmpeg_available().await {
+            return Ok(());
+        }
+
+        // Try to find system FFmpeg first
+        if self.find_system_ffmpeg().is_some() {
+            return Ok(());
+        }
+
+        // Download and install FFmpeg with progress
+        self.download_ffmpeg_internal(window).await?;
         Ok(())
     }
 
@@ -116,14 +133,22 @@ impl FFmpegManager {
         }
     }
 
-    async fn download_ffmpeg(&self) -> Result<()> {
+    async fn download_ffmpeg_internal(&self, window: Option<Window>) -> Result<()> {
         let download_url = self.get_download_url();
         let ffmpeg_dir = self.ffmpeg_path.parent().unwrap();
         
         // Create directory
         fs::create_dir_all(ffmpeg_dir).await?;
 
-        // Download FFmpeg
+        // Emit initial progress
+        if let Some(ref w) = window {
+            let _ = w.emit("ffmpeg-download-progress", serde_json::json!({
+                "progress": 0,
+                "message": "Начинаем скачивание FFmpeg..."
+            }));
+        }
+
+        // Download FFmpeg with progress
         println!("Downloading FFmpeg from: {}", download_url);
         let response = reqwest::get(&download_url).await?;
         
@@ -131,20 +156,58 @@ impl FFmpegManager {
             return Err(anyhow!("Failed to download FFmpeg: HTTP {}", response.status()));
         }
 
-        let bytes = response.bytes().await?;
-        let archive_path = ffmpeg_dir.join("ffmpeg.zip");
+        let total_size = response.content_length().unwrap_or(0);
+        let mut downloaded = 0u64;
+        let mut stream = response.bytes_stream();
         
-        // Save zip file
+        let archive_path = ffmpeg_dir.join("ffmpeg.zip");
         let mut file = fs::File::create(&archive_path).await?;
-        file.write_all(&bytes).await?;
+        
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result?;
+            file.write_all(&chunk).await?;
+            
+            downloaded += chunk.len() as u64;
+            
+            if let Some(ref w) = window {
+                let progress = if total_size > 0 {
+                    (downloaded as f32 / total_size as f32 * 90.0) as u32 // 90% for download, 10% for extraction
+                } else {
+                    45 // If we can't determine size, just show 45%
+                };
+                
+                let _ = w.emit("ffmpeg-download-progress", serde_json::json!({
+                    "progress": progress,
+                    "message": format!("Скачано: {}/{}", format_bytes(downloaded), 
+                                     if total_size > 0 { format_bytes(total_size) } else { "неизвестно".to_string() })
+                }));
+            }
+        }
+        
         file.sync_all().await?;
         drop(file);
+
+        // Emit extraction progress
+        if let Some(ref w) = window {
+            let _ = w.emit("ffmpeg-download-progress", serde_json::json!({
+                "progress": 90,
+                "message": "Извлекаем FFmpeg из архива..."
+            }));
+        }
 
         // Extract zip
         self.extract_ffmpeg(&archive_path).await?;
         
         // Clean up zip file
         fs::remove_file(archive_path).await?;
+
+        // Emit completion
+        if let Some(ref w) = window {
+            let _ = w.emit("ffmpeg-download-progress", serde_json::json!({
+                "progress": 100,
+                "message": "FFmpeg успешно установлен!"
+            }));
+        }
 
         println!("FFmpeg installed successfully");
         Ok(())
@@ -335,4 +398,23 @@ fn format_duration(seconds: f64) -> String {
     } else {
         format!("{}:{:02}", minutes, secs)
     }
+}
+
+fn format_bytes(bytes: u64) -> String {
+    const UNITS: &[&str] = &["B", "KB", "MB", "GB"];
+    const THRESHOLD: u64 = 1024;
+
+    if bytes == 0 {
+        return "0 B".to_string();
+    }
+
+    let mut size = bytes as f64;
+    let mut unit_index = 0;
+
+    while size >= THRESHOLD as f64 && unit_index < UNITS.len() - 1 {
+        size /= THRESHOLD as f64;
+        unit_index += 1;
+    }
+
+    format!("{:.1} {}", size, UNITS[unit_index])
 }

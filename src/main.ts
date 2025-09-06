@@ -82,6 +82,10 @@ class TranscriptionAssistant {
     await this.listen('processing-complete', (event: any) => {
       this.onProcessingComplete(event.payload);
     });
+
+    await this.listen('ffmpeg-download-progress', (event: any) => {
+      this.updateFFmpegDownloadProgress(event.payload.progress, event.payload.message);
+    });
   }
 
   private async selectFile() {
@@ -148,6 +152,25 @@ class TranscriptionAssistant {
 
     progressFill.style.width = `${progress}%`;
     progressText.textContent = message;
+  }
+
+  private updateFFmpegDownloadProgress(progress: number, message: string) {
+    const progressContainer = document.getElementById('ffmpegDownloadProgress')!;
+    const progressFill = document.getElementById('ffmpegProgressFill')!;
+    const progressText = document.getElementById('ffmpegProgressText')!;
+
+    // Show the progress container
+    progressContainer.style.display = 'block';
+    
+    progressFill.style.width = `${progress}%`;
+    progressText.textContent = message;
+
+    // Hide the progress when complete
+    if (progress >= 100) {
+      setTimeout(() => {
+        progressContainer.style.display = 'none';
+      }, 2000);
+    }
   }
 
   private onProcessingComplete(result: any) {

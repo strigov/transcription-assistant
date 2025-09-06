@@ -45,7 +45,7 @@ lazy_static::lazy_static! {
 }
 
 #[tauri::command]
-pub async fn get_file_info(path: String) -> Result<FileInfo, String> {
+pub async fn get_file_info(window: Window, path: String) -> Result<FileInfo, String> {
     println!("Getting file info for path: {}", path);
     let file_path = Path::new(&path);
     
@@ -72,13 +72,22 @@ pub async fn get_file_info(path: String) -> Result<FileInfo, String> {
     let duration = match FFmpegManager::new() {
         Ok(ffmpeg_manager) => {
             println!("FFmpegManager created successfully");
-            match ffmpeg_manager.get_file_info(&path).await {
-                Ok((duration_str, _)) => {
-                    println!("Successfully got duration: {}", duration_str);
-                    duration_str
+            // First ensure FFmpeg is available with progress
+            match ffmpeg_manager.ensure_ffmpeg_available_with_progress(Some(window.clone())).await {
+                Ok(_) => {
+                    match ffmpeg_manager.get_file_info(&path).await {
+                        Ok((duration_str, _)) => {
+                            println!("Successfully got duration: {}", duration_str);
+                            duration_str
+                        }
+                        Err(e) => {
+                            println!("Failed to get duration: {}", e);
+                            "Unknown".to_string()
+                        }
+                    }
                 }
                 Err(e) => {
-                    println!("Failed to get duration: {}", e);
+                    println!("Failed to ensure FFmpeg available: {}", e);
                     "Unknown".to_string()
                 }
             }
