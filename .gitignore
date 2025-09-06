@@ -143,3 +143,4 @@ test-files/
 *.code-workspace
 .claude/settings.local.json
 claude.md
+CLAUDE.md
