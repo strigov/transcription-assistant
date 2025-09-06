@@ -7,7 +7,7 @@
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "Помощник в транскрибировании",
+    "productName": "Transcription Assistant",
     "version": "0.2.4"
   },
   "tauri": {
@@ -64,6 +64,9 @@
         "certificateThumbprint": null,
         "digestAlgorithm": "sha256",
         "timestampUrl": "",
+        "wix": {
+          "language": "en-US"
+        },
         "nsis": {
           "installMode": "perMachine"
         }
