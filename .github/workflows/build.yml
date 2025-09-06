@@ -2,12 +2,7 @@ name: "Build & Release"
 
 on:
   push:
-    branches: [ main, develop ]
     tags: [ 'v*' ]
-  pull_request:
-    branches: [ main ]
-  release:
-    types: [ published ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -50,8 +45,9 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Transcription Assistant v__VERSION__'
-          releaseBody: 'See the assets to download and install this version.'
-          releaseDraft: true
+          releaseBody: 'Desktop приложение для помощи в транскрибировании аудио/видео файлов.'
+          releaseDraft: false
           prerelease: false
           includeDebug: false
+          args: '--verbose'
 
