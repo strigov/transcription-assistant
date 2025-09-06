@@ -1,4 +1,6 @@
 
+import './style.css';
+
 // Add loading indicator
 console.log('Загрузка Помощника транскрипции...');
 document.addEventListener('DOMContentLoaded', () => {
@@ -249,7 +251,7 @@ class TranscriptionAssistant {
               <div class="folder-path" title="${outputFolder}">${this.truncatePath(outputFolder)}</div>
             </div>
           </div>
-          <button class="btn btn-primary" onclick="app.openSegmentsFolder(\`${outputFolder.replace(/\\/g, '\\\\')}\`)">
+          <button class="btn btn-primary" id="openFolderBtn">
             <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-1M10 6l5 5-5 5"></path>
             </svg>
@@ -257,6 +259,14 @@ class TranscriptionAssistant {
           </button>
         `;
         summaryDiv.appendChild(folderDiv);
+        
+        // Add event listener for open folder button
+        const openFolderBtn = folderDiv.querySelector('#openFolderBtn') as HTMLButtonElement;
+        if (openFolderBtn) {
+          openFolderBtn.addEventListener('click', () => {
+            this.openSegmentsFolder(outputFolder);
+          });
+        }
       }
       
       // Segments list
@@ -291,13 +301,6 @@ class TranscriptionAssistant {
     }
   }
 
-  private formatDuration(seconds: number): string {
-    if (isNaN(seconds) || seconds === 0) return '0:00';
-    
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
 
   private getParentFolder(filePath: string): string {
     // Debug the input path
