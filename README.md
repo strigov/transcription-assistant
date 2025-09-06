@@ -43,7 +43,7 @@
 
 #### Клонирование и настройка
 ```bash
-git clone <repository-url>
+git clone https://github.com/strigov/transcription-assistant
 cd transcription-assistant
 npm install
 ```
