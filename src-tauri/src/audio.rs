@@ -60,7 +60,7 @@ impl AudioProcessor {
         progress_callback: impl Fn(f32, String) + Clone,
     ) -> Result<Vec<AudioChunk>> {
         println!("Starting audio processing for: {}", input_path);
-        progress_callback(0.0, "Analyzing audio file...".to_string());
+        progress_callback(0.0, "Анализ аудиофайла...".to_string());
         
         // Get file info
         let (_duration_str, total_duration) = self.ffmpeg_manager.get_file_info(input_path).await?;
@@ -82,7 +82,7 @@ impl AudioProcessor {
         fs::create_dir_all(&output_dir).await?;
         println!("Created output directory: {:?}", output_dir);
         
-        progress_callback(10.0, "Planning audio chunks...".to_string());
+        progress_callback(10.0, "Планирование разделения аудио...".to_string());
         
         let chunks = if options.use_silence_detection {
             println!("Using silence detection for splitting");
@@ -93,7 +93,7 @@ impl AudioProcessor {
         };
         
         println!("Created {} chunks", chunks.len());
-        progress_callback(100.0, "Audio processing complete!".to_string());
+        progress_callback(100.0, "Обработка аудио завершена!".to_string());
         
         Ok(chunks)
     }
@@ -120,7 +120,7 @@ impl AudioProcessor {
 
             progress_callback(
                 20.0 + (70.0 * (i as f32 + 1.0) / chunk_count as f32),
-                format!("Processing chunk {} of {}...", i + 1, chunk_count),
+                format!("Обработка сегмента {} из {}...", i + 1, chunk_count),
             );
 
             let chunk_path = output_dir.join(format!("chunk_{:03}.{}", i + 1, options.output_format));
@@ -146,7 +146,7 @@ impl AudioProcessor {
         output_dir: &Path,
         progress_callback: impl Fn(f32, String),
     ) -> Result<Vec<AudioChunk>> {
-        progress_callback(15.0, "Detecting silence points...".to_string());
+        progress_callback(15.0, "Поиск точек тишины...".to_string());
         
         // Detect silence points
         let silence_points = self.detect_silence_points(input_path).await?;
@@ -158,7 +158,7 @@ impl AudioProcessor {
             return self.split_by_time(input_path, options, total_duration, output_dir, progress_callback).await;
         }
         
-        progress_callback(25.0, "Creating chunks based on silence detection...".to_string());
+        progress_callback(25.0, "Создание сегментов на основе тишины...".to_string());
         
         let mut chunks = Vec::new();
         let mut current_start = 0.0;
@@ -172,7 +172,7 @@ impl AudioProcessor {
             if current_duration >= max_duration || i == silence_points.len() - 1 {
                 progress_callback(
                     25.0 + (65.0 * (chunk_number as f32) / (silence_points.len() as f32 + 1.0)),
-                    format!("Processing chunk {}...", chunk_number),
+                    format!("Обработка сегмента {}...", chunk_number),
                 );
 
                 let end_time = if i == silence_points.len() - 1 { total_duration } else { silence_point };
@@ -206,15 +206,22 @@ impl AudioProcessor {
         println!("Detecting silence points in: {}", input_path);
         let ffmpeg_path = self.ffmpeg_manager.get_ffmpeg_path()?;
         
-        let output = Command::new(&ffmpeg_path)
-            .args([
-                "-i", input_path,
-                "-af", "silencedetect=noise=-40dB:duration=1",  // More sensitive settings
-                "-f", "null",
-                "-",
-                "-v", "info",
-            ])
-            .output()?;
+        let mut cmd = Command::new(&ffmpeg_path);
+        cmd.args([
+            "-i", input_path,
+            "-af", "silencedetect=noise=-40dB:duration=1",  // More sensitive settings
+            "-f", "null",
+            "-",
+            "-v", "info",
+        ]);
+        
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+        
+        let output = cmd.output()?;
 
         let stderr = String::from_utf8_lossy(&output.stderr);
         println!("FFmpeg silence detection output: {}", stderr);
@@ -256,19 +263,26 @@ impl AudioProcessor {
         
         let ffmpeg_path = self.ffmpeg_manager.get_ffmpeg_path()?;
         
-        let output = Command::new(ffmpeg_path)
-            .args([
-                "-i", input_path,
-                "-ss", &start_time.to_string(),
-                "-t", &duration.to_string(),
-                "-acodec", "libmp3lame",  // MP3 encoder
-                "-b:a", "128k",           // 128 kbps bitrate
-                "-ar", "44100",           // Keep original sample rate
-                "-ac", "2",               // Keep stereo
-                "-y",
-                output_path.to_str().unwrap(),
-            ])
-            .output()?;
+        let mut cmd = Command::new(ffmpeg_path);
+        cmd.args([
+            "-i", input_path,
+            "-ss", &start_time.to_string(),
+            "-t", &duration.to_string(),
+            "-acodec", "libmp3lame",  // MP3 encoder
+            "-b:a", "128k",           // 128 kbps bitrate
+            "-ar", "44100",           // Keep original sample rate
+            "-ac", "2",               // Keep stereo
+            "-y",
+            output_path.to_str().unwrap(),
+        ]);
+        
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+        
+        let output = cmd.output()?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

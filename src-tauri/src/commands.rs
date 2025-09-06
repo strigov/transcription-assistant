@@ -273,6 +273,7 @@ pub async fn export_merged_transcription(
 
 #[tauri::command]
 pub async fn open_folder(path: String) -> Result<(), String> {
+    println!("Opening folder: {}", path);
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("open")
@@ -282,8 +283,11 @@ pub async fn open_folder(path: String) -> Result<(), String> {
     }
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("explorer")
-            .arg(&path)
+        use std::os::windows::process::CommandExt;
+        // Use cmd /c start to handle paths with special characters better
+        std::process::Command::new("cmd")
+            .args(["/c", "start", "", &path])
+            .creation_flags(0x08000000) // CREATE_NO_WINDOW
             .spawn()
             .map_err(|e| format!("Failed to open folder: {}", e))?;
     }

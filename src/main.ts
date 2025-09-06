@@ -99,12 +99,16 @@ class TranscriptionAssistant {
       });
 
       if (selected && typeof selected === 'string') {
+        // Show loading state
+        this.showFileLoadingState(true);
+        
         this.selectedFile = selected;
         await this.displayFileInfo(selected);
         (document.getElementById('startProcessingBtn') as HTMLButtonElement).disabled = false;
       }
     } catch (error) {
       console.error('Ошибка выбора файла:', error);
+      this.showFileLoadingState(false);
     }
   }
 
@@ -120,8 +124,30 @@ class TranscriptionAssistant {
       fileDuration.textContent = (fileInfo as any).duration;
       fileSize.textContent = (fileInfo as any).size;
       fileInfoDiv.style.display = 'block';
+      
+      // Hide loading state and show success
+      this.showFileLoadingState(false);
+      this.showFileSuccessState();
+      
+      // If FFmpeg was already installed, show ready status
+      this.checkFFmpegStatus();
     } catch (error) {
       console.error('Ошибка получения информации о файле:', error);
+      // Hide loading state and show error
+      this.showFileLoadingState(false);
+      this.showFileErrorState('Ошибка анализа файла. Попробуйте еще раз.');
+    }
+  }
+
+  private checkFFmpegStatus() {
+    // If no download progress was shown, FFmpeg is already available
+    const statusContainer = document.getElementById('ffmpegStatus')!;
+    const progressContainer = document.getElementById('ffmpegDownloadProgress')!;
+    const readyStatus = document.getElementById('ffmpegReady')!;
+    
+    if (progressContainer.style.display !== 'block') {
+      statusContainer.style.display = 'block';
+      readyStatus.style.display = 'flex';
     }
   }
 
@@ -155,27 +181,39 @@ class TranscriptionAssistant {
   }
 
   private updateFFmpegDownloadProgress(progress: number, message: string) {
+    const statusContainer = document.getElementById('ffmpegStatus')!;
     const progressContainer = document.getElementById('ffmpegDownloadProgress')!;
     const progressFill = document.getElementById('ffmpegProgressFill')!;
     const progressText = document.getElementById('ffmpegProgressText')!;
+    const readyStatus = document.getElementById('ffmpegReady')!;
 
-    // Show the progress container
-    progressContainer.style.display = 'block';
+    // Show status container
+    statusContainer.style.display = 'block';
     
-    progressFill.style.width = `${progress}%`;
-    progressText.textContent = message;
-
-    // Hide the progress when complete
-    if (progress >= 100) {
+    if (progress < 100) {
+      // Show download progress
+      progressContainer.style.display = 'block';
+      readyStatus.style.display = 'none';
+      
+      progressFill.style.width = `${progress}%`;
+      progressText.textContent = message;
+    } else {
+      // Hide progress and show ready status
       setTimeout(() => {
         progressContainer.style.display = 'none';
-      }, 2000);
+        readyStatus.style.display = 'flex';
+      }, 1000);
     }
   }
 
   private onProcessingComplete(result: any) {
     console.log('Обработка завершена:', result);
     this.updateProgress(100, 'Обработка завершена!');
+    
+    // Add green gradient to completed progress bar
+    const progressFill = document.getElementById('progressFill')!;
+    progressFill.classList.add('completed');
+    
     (document.getElementById('startProcessingBtn') as HTMLButtonElement).disabled = false;
     
     // Показать раздел результатов и отобразить обработанные сегменты
@@ -188,34 +226,102 @@ class TranscriptionAssistant {
     resultsDiv.innerHTML = '';
 
     if (result.segments && Array.isArray(result.segments)) {
-      const segmentsContainer = document.createElement('div');
-      segmentsContainer.className = 'segments-container';
+      const segments = result.segments;
       
-      const title = document.createElement('h3');
-      title.textContent = `✅ Создано ${result.segments.length} аудио сегментов:`;
-      segmentsContainer.appendChild(title);
-
-      result.segments.forEach((segment: any, index: number) => {
-        const segmentItem = document.createElement('div');
-        segmentItem.className = 'segment-item';
-        segmentItem.innerHTML = `
-          <div class="segment-info">
-            <strong>Segment ${index + 1}</strong>
-            <span class="segment-duration">${segment.duration || 'Длительность неизвестна'}</span>
-            <span class="segment-path">${segment.path || 'Путь неизвестен'}</span>
+      // Output folder section
+      const summaryDiv = document.createElement('div');
+      summaryDiv.className = 'processing-summary';
+      
+      // Output folder info
+      const outputFolder = segments[0]?.path ? this.getParentFolder(segments[0].path) : '';
+      console.log('Frontend: First segment path:', segments[0]?.path);
+      console.log('Frontend: Calculated outputFolder:', outputFolder);
+      if (outputFolder) {
+        const folderDiv = document.createElement('div');
+        folderDiv.className = 'output-folder';
+        folderDiv.innerHTML = `
+          <div class="folder-info">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+            </svg>
+            <div class="folder-details">
+              <div class="folder-label">Папка с сегментами:</div>
+              <div class="folder-path" title="${outputFolder}">${this.truncatePath(outputFolder)}</div>
+            </div>
           </div>
-          <div class="segment-actions">
-            <button onclick="navigator.clipboard.writeText('${segment.path}')">📋 Копировать путь</button>
-            <button onclick="app.openFolder('${segment.path}')">📁 Открыть папку</button>
+          <button class="btn btn-primary" onclick="app.openSegmentsFolder(\`${outputFolder.replace(/\\/g, '\\\\')}\`)">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-1M10 6l5 5-5 5"></path>
+            </svg>
+            Открыть папку
+          </button>
+        `;
+        summaryDiv.appendChild(folderDiv);
+      }
+      
+      // Segments list
+      const segmentsDiv = document.createElement('div');
+      segmentsDiv.className = 'segments-list';
+      
+      const segmentsHeader = document.createElement('h4');
+      segmentsHeader.textContent = 'Список сегментов:';
+      segmentsDiv.appendChild(segmentsHeader);
+      
+      segments.forEach((segment: any, index: number) => {
+        const segmentItem = document.createElement('div');
+        segmentItem.className = 'segment-item-compact';
+        
+        const filename = segment.path ? segment.path.split(/[\\/]/).pop() : `segment_${index + 1}`;
+        
+        segmentItem.innerHTML = `
+          <div class="segment-number">${index + 1}</div>
+          <div class="segment-details">
+            <div class="segment-name">${filename}</div>
+            <div class="segment-duration">${segment.duration || 'неизвестно'}</div>
           </div>
         `;
-        segmentsContainer.appendChild(segmentItem);
+        
+        segmentsDiv.appendChild(segmentItem);
       });
 
-      resultsDiv.appendChild(segmentsContainer);
+      resultsDiv.appendChild(summaryDiv);
+      resultsDiv.appendChild(segmentsDiv);
     } else {
-      resultsDiv.innerHTML = '<p>❌ Сегменты не были созданы. Проверьте логи обработки.</p>';
+      resultsDiv.innerHTML = '<div class="status status-error">❌ Сегменты не были созданы. Проверьте логи обработки.</div>';
     }
+  }
+
+  private formatDuration(seconds: number): string {
+    if (isNaN(seconds) || seconds === 0) return '0:00';
+    
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  private getParentFolder(filePath: string): string {
+    // Debug the input path
+    console.log('getParentFolder input:', filePath);
+    console.log('getParentFolder input length:', filePath.length);
+    
+    // Find the last occurrence of either slash type
+    const lastBackslash = filePath.lastIndexOf('\\');
+    const lastForwardSlash = filePath.lastIndexOf('/');
+    const lastSlashIndex = Math.max(lastBackslash, lastForwardSlash);
+    
+    if (lastSlashIndex === -1) {
+      console.log('No slash found, returning input');
+      return filePath;
+    }
+    
+    const result = filePath.substring(0, lastSlashIndex);
+    console.log('getParentFolder result:', result);
+    return result;
+  }
+
+  private truncatePath(path: string, maxLength: number = 50): string {
+    if (path.length <= maxLength) return path;
+    return '...' + path.slice(-(maxLength - 3));
   }
 
   private async selectTranscriptionFiles() {
@@ -406,6 +512,26 @@ class TranscriptionAssistant {
     }
   }
 
+  public async openSegmentsFolder(folderPath: string) {
+    try {
+      console.log('Frontend: Открываем папку:', folderPath);
+      console.log('Frontend: Длина пути:', folderPath.length);
+      console.log('Frontend: Существует ли путь:', folderPath !== null && folderPath !== undefined);
+      
+      // Fix path for Windows - ensure double backslashes for JSON serialization
+      const fixedPath = folderPath.replace(/\\/g, '\\\\');
+      console.log('Frontend: Fixed path:', fixedPath);
+      
+      await this.invoke('open_folder', { path: fixedPath });
+      console.log('Frontend: Команда open_folder выполнена успешно');
+    } catch (error) {
+      console.error('Ошибка открытия папки с сегментами:', error);
+      // Запасной вариант: копировать путь в буфер обмена
+      navigator.clipboard.writeText(folderPath);
+      alert('Не удалось открыть папку. Путь скопирован в буфер обмена.');
+    }
+  }
+
   private async mergeTranscriptions() {
     if (this.transcriptionFiles.length === 0) return;
 
@@ -583,7 +709,7 @@ class TranscriptionAssistant {
         }
         
         if (mediaFiles.length === 0 && transcriptionFiles.length === 0) {
-          alert('Пожалуйста, перетащите поддерживаемые файлы (медиа: MP4, MP3, WAV и др.; транскрипции: TXT, SRT, MD)');
+          this.showFileErrorState('Неподдерживаемый формат файла. Используйте медиа или текстовые файлы.');
         }
       }
     });
@@ -599,10 +725,65 @@ class TranscriptionAssistant {
       const filePath = filePaths[0]; // Take first file
       console.log('🎵 Processing media file:', filePath);
       
+      // Show loading state
+      this.showFileLoadingState(true);
+      
       this.selectedFile = filePath;
       this.displayFileInfo(filePath);
       (document.getElementById('startProcessingBtn') as HTMLButtonElement).disabled = false;
     }
+  }
+
+  private showFileLoadingState(loading: boolean) {
+    const dropZone = document.getElementById('fileDropZone')!;
+    const dropIcon = document.getElementById('dropIcon')!;
+    const loadingSpinner = document.getElementById('loadingSpinner')!;
+    const dropText = document.getElementById('dropText')!;
+    const selectBtn = document.getElementById('selectFileBtn')! as HTMLButtonElement;
+    
+    if (loading) {
+      dropZone.classList.add('loading');
+      dropIcon.style.display = 'none';
+      loadingSpinner.style.display = 'block';
+      dropText.textContent = 'Анализ файла...';
+      selectBtn.disabled = true;
+    } else {
+      dropZone.classList.remove('loading');
+      dropIcon.style.display = 'block';
+      loadingSpinner.style.display = 'none';
+      dropText.textContent = 'Перетащите сюда ваш аудио/видео файл';
+      selectBtn.disabled = false;
+    }
+  }
+
+  private showFileSuccessState() {
+    const dropZone = document.getElementById('fileDropZone')!;
+    const dropText = document.getElementById('dropText')!;
+    
+    dropZone.classList.remove('loading', 'error');
+    dropZone.classList.add('success');
+    dropText.textContent = '✓ Файл успешно загружен';
+    
+    // Remove success state after animation
+    setTimeout(() => {
+      dropZone.classList.remove('success');
+      dropText.textContent = 'Перетащите сюда ваш аудио/видео файл';
+    }, 2000);
+  }
+
+  private showFileErrorState(message: string) {
+    const dropZone = document.getElementById('fileDropZone')!;
+    const dropText = document.getElementById('dropText')!;
+    
+    dropZone.classList.remove('loading', 'success');
+    dropZone.classList.add('error');
+    dropText.textContent = message;
+    
+    // Remove error state after animation
+    setTimeout(() => {
+      dropZone.classList.remove('error');
+      dropText.textContent = 'Перетащите сюда ваш аудио/видео файл';
+    }, 3000);
   }
 
   private handleTranscriptionFiles(filePaths: string[]) {

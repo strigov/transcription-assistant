@@ -183,6 +183,36 @@
       background: var(--accent-light);
     }
 
+    .drop-zone.loading {
+      border-color: var(--accent-primary);
+      background: rgba(59, 130, 246, 0.02);
+      pointer-events: none;
+    }
+
+    .drop-zone.success {
+      border-color: var(--success);
+      background: var(--success-light);
+      animation: successPulse 0.6s ease-out;
+    }
+
+    .drop-zone.error {
+      border-color: var(--danger);
+      background: var(--danger-light);
+      animation: errorShake 0.6s ease-out;
+    }
+
+    @keyframes successPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes errorShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
     .drop-icon {
       width: 48px;
       height: 48px;
@@ -366,9 +396,22 @@
       animation: shimmer 2s infinite;
     }
 
+    .progress-fill.completed {
+      background: linear-gradient(90deg, var(--success), #22c55e);
+    }
+
+    .progress-fill.completed::after {
+      display: none;
+    }
+
     @keyframes shimmer {
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
     .progress-text {
@@ -536,6 +579,131 @@
       }
     }
 
+    /* Processing Results */
+    .processing-summary {
+      margin-bottom: 24px;
+    }
+
+    .summary-stats {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .stat-item {
+      text-align: center;
+      flex: 1;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .output-folder {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      gap: 16px;
+    }
+
+    .folder-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .folder-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .folder-label {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .folder-path {
+      font-size: 0.95rem;
+      color: var(--text-primary);
+      font-family: monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .segments-list {
+      margin-top: 24px;
+    }
+
+    .segments-list h4 {
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      font-size: 1.1rem;
+    }
+
+    .segment-item-compact {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border-color);
+      transition: all 0.2s ease;
+    }
+
+    .segment-item-compact:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .segment-number {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent-light);
+      color: var(--accent-primary);
+      border-radius: 50%;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .segment-details {
+      flex: 1;
+    }
+
+    .segment-name {
+      color: var(--text-primary);
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .segment-duration {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
     /* Icons */
     .icon {
       width: 20px;
@@ -560,6 +728,17 @@
       .card {
         padding: 20px;
       }
+
+      .summary-stats {
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .output-folder {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
     }
   </style>
 </head>
@@ -583,10 +762,14 @@
         </div>
         
         <div class="drop-zone" id="fileDropZone">
-          <svg class="drop-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="drop-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="dropIcon">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
           </svg>
-          <p class="drop-text">Перетащите сюда ваш аудио/видео файл</p>
+          <!-- Loading spinner -->
+          <svg class="drop-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="loadingSpinner" style="display: none; animation: spin 1s linear infinite;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2v4m6.364.636l-2.828 2.828M22 12h-4m-1.636 6.364l-2.828-2.828M12 22v-4m-6.364-1.636l2.828-2.828M2 12h4m1.636-6.364l2.828 2.828"></path>
+          </svg>
+          <p class="drop-text" id="dropText">Перетащите сюда ваш аудио/видео файл</p>
           <button class="btn btn-primary" id="selectFileBtn">Выбрать файл</button>
         </div>
         
@@ -605,12 +788,23 @@
           </div>
         </div>
 
-        <!-- FFmpeg Download Progress -->
-        <div class="progress-container" id="ffmpegDownloadProgress" style="display: none;">
-          <div class="progress-bar">
-            <div class="progress-fill" id="ffmpegProgressFill" style="width: 0%"></div>
+        <!-- FFmpeg Status -->
+        <div id="ffmpegStatus" style="display: none;">
+          <!-- Download Progress -->
+          <div class="progress-container" id="ffmpegDownloadProgress" style="display: none;">
+            <div class="progress-bar">
+              <div class="progress-fill" id="ffmpegProgressFill" style="width: 0%"></div>
+            </div>
+            <p class="progress-text" id="ffmpegProgressText">Подготовка...</p>
           </div>
-          <p class="progress-text" id="ffmpegProgressText">Подготовка...</p>
+          
+          <!-- Ready Status -->
+          <div class="status status-success" id="ffmpegReady" style="display: none;">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>FFmpeg скачан и готов к работе</span>
+          </div>
         </div>
       </div>
 
@@ -664,7 +858,7 @@
           <div class="progress-bar">
             <div class="progress-fill" id="progressFill" style="width: 0%"></div>
           </div>
-          <p class="progress-text" id="progressText">Подготовка...</p>
+          <p class="progress-text" id="progressText">Ожидание начала обработки</p>
         </div>
       </div>
 

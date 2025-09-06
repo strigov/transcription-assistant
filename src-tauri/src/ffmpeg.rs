@@ -127,7 +127,16 @@ impl FFmpegManager {
     }
 
     async fn test_ffmpeg(&self, path: &Path) -> bool {
-        match Command::new(path).arg("-version").output() {
+        let mut cmd = Command::new(path);
+        cmd.arg("-version");
+        
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+        
+        match cmd.output() {
             Ok(output) => output.status.success(),
             Err(_) => false,
         }
@@ -268,13 +277,20 @@ impl FFmpegManager {
             return Err(anyhow!("File does not exist: {}", file_path));
         }
         
-        let output = Command::new(&ffmpeg_path)
-            .args([
-                "-i", file_path,
-                "-v", "error",  // Change from quiet to error to get more info
-                "-f", "null", "-"
-            ])
-            .output()?;
+        let mut cmd = Command::new(&ffmpeg_path);
+        cmd.args([
+            "-i", file_path,
+            "-v", "error",  // Change from quiet to error to get more info
+            "-f", "null", "-"
+        ]);
+        
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+        
+        let output = cmd.output()?;
 
         // FFmpeg outputs file info to stderr, check both stderr and stdout
         let stderr_str = String::from_utf8_lossy(&output.stderr);
@@ -320,13 +336,20 @@ impl FFmpegManager {
         let ffmpeg_path = self.get_ffmpeg_path()?;
         
         println!("Trying alternative approach with -hide_banner");
-        let output = Command::new(&ffmpeg_path)
-            .args([
-                "-hide_banner",
-                "-i", file_path,
-                "-f", "null", "-"
-            ])
-            .output()?;
+        let mut cmd = Command::new(&ffmpeg_path);
+        cmd.args([
+            "-hide_banner",
+            "-i", file_path,
+            "-f", "null", "-"
+        ]);
+        
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+        
+        let output = cmd.output()?;
 
         let stderr_str = String::from_utf8_lossy(&output.stderr);
         println!("Alternative FFmpeg output: {}", stderr_str);
