@@ -335,7 +335,8 @@ class TranscriptionAssistant {
       });
 
       if (selected && Array.isArray(selected)) {
-        this.transcriptionFiles = selected;
+        // Sort files automatically by numeric sequence
+        this.transcriptionFiles = this.sortTranscriptionFiles(selected);
         this.displayTranscriptionFiles();
         this.setDefaultOutputPath();
         (document.getElementById('mergeBtn') as HTMLButtonElement).disabled = false;
@@ -790,11 +791,67 @@ class TranscriptionAssistant {
     console.log('📝 Transcription files handler called with files:', filePaths.length);
     
     if (filePaths.length > 0) {
-      this.transcriptionFiles = filePaths;
+      // Sort files automatically by numeric sequence
+      this.transcriptionFiles = this.sortTranscriptionFiles(filePaths);
       this.displayTranscriptionFiles();
       this.setDefaultOutputPath();
       (document.getElementById('mergeBtn') as HTMLButtonElement).disabled = false;
     }
+  }
+
+  private sortTranscriptionFiles(filePaths: string[]): string[] {
+    return filePaths.sort((a, b) => {
+      // Extract filename without path
+      const fileA = a.split(/[\\/]/).pop() || '';
+      const fileB = b.split(/[\\/]/).pop() || '';
+      
+      // Try to extract numbers from filenames
+      const numberA = this.extractSequenceNumber(fileA);
+      const numberB = this.extractSequenceNumber(fileB);
+      
+      // If both have numbers, sort by number
+      if (numberA !== null && numberB !== null) {
+        return numberA - numberB;
+      }
+      
+      // If only one has a number, prioritize it
+      if (numberA !== null && numberB === null) return -1;
+      if (numberA === null && numberB !== null) return 1;
+      
+      // If neither has numbers, sort alphabetically
+      return fileA.localeCompare(fileB, 'ru', { numeric: true });
+    });
+  }
+
+  private extractSequenceNumber(filename: string): number | null {
+    // Remove file extension
+    const nameWithoutExt = filename.replace(/\.[^.]*$/, '');
+    
+    // Pattern 1: Pure numbers at the end (e.g., "1.txt", "part2.srt")
+    let match = nameWithoutExt.match(/(\d+)$/);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    
+    // Pattern 2: Numbers with common separators (e.g., "part_1.txt", "часть-2.srt", "segment 3.md")
+    match = nameWithoutExt.match(/[_\-\s](\d+)$/);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    
+    // Pattern 3: Numbers after common words (case insensitive)
+    match = nameWithoutExt.match(/(?:part|часть|segment|сегмент|file|файл|chapter|глава)[_\-\s]*(\d+)$/i);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    
+    // Pattern 4: First number found in filename (fallback)
+    match = nameWithoutExt.match(/(\d+)/);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    
+    return null;
   }
 
 }
