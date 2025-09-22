@@ -87,6 +87,14 @@ jobs:
         if: matrix.language == 'javascript'
         run: npm ci
 
+      - name: Install dependencies for Rust build
+        if: matrix.language == 'rust'
+        run: npm ci
+
+      - name: Build frontend for Rust
+        if: matrix.language == 'rust'
+        run: npm run build
+
       - name: Build Rust project
         if: matrix.language == 'rust'
         run: cd src-tauri && cargo build --release
