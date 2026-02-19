@@ -50,7 +50,7 @@
 **Альтернативный способ (через терминал):**
 
 ```bash
-xattr -cr /Applications/Transcription\ Assistant.app
+xattr -cr "/Applications/Transcription Assistant.app"
 ```
 
 После этого приложение будет запускаться без предупреждений.
