@@ -117,6 +117,7 @@ dist
 # Temporary folders
 tmp/
 temp/
+testing/
 
 # Rust
 **/*.rs.bk

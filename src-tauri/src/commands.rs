@@ -39,9 +39,15 @@ pub struct SegmentInfo {
 }
 
 
+struct MergedState {
+    content: String,
+    format: String,
+    files: Vec<String>,
+}
+
 // Global state for merged transcription
 lazy_static::lazy_static! {
-    static ref MERGED_TRANSCRIPTION: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    static ref MERGED_TRANSCRIPTION: Arc<Mutex<Option<MergedState>>> = Arc::new(Mutex::new(None));
 }
 
 #[tauri::command]
@@ -201,10 +207,14 @@ pub async fn merge_transcriptions(
         Ok(_) => {
             match merger.merge().await {
                 Ok(merged_content) => {
-                    // Store the merged content globally
+                    // Store merged content, format, and source files for re-merge on format change
                     let mut global_transcription = MERGED_TRANSCRIPTION.lock().await;
-                    *global_transcription = Some(merged_content.clone());
-                    
+                    *global_transcription = Some(MergedState {
+                        content: merged_content.clone(),
+                        format: output_format.to_lowercase(),
+                        files: files.clone(),
+                    });
+
                     Ok(format!(
                         "Successfully merged {} files ({} segments) into {} format", 
                         merger.get_file_count(),
@@ -229,26 +239,46 @@ pub async fn export_merged_transcription(
     include_extended_info: bool,
 ) -> Result<serde_json::Value, String> {
     let global_transcription = MERGED_TRANSCRIPTION.lock().await;
-    
-    if let Some(content) = global_transcription.as_ref() {
+
+    if let Some(state) = global_transcription.as_ref() {
+        // If the export format differs from the merge format, re-merge with the correct format
+        let content = if output_format.to_lowercase() != state.format {
+            let target_format = match output_format.to_lowercase().as_str() {
+                "srt" => FileFormat::Srt,
+                "md" | "markdown" => FileFormat::Markdown,
+                _ => FileFormat::Txt,
+            };
+            let options = MergeOptions {
+                output_format: target_format,
+                time_offset_seconds: 0.0,
+                remove_timestamps: false,
+                add_file_markers: true,
+            };
+            let mut merger = TranscriptionMerger::new(options);
+            merger.add_files(state.files.clone()).await.map_err(|e| e.to_string())?;
+            merger.merge().await.map_err(|e| e.to_string())?
+        } else {
+            state.content.clone()
+        };
+
         // Build full file path
         let extension = match output_format.as_str() {
             "srt" => "srt",
-            "md" => "md", 
+            "md" => "md",
             _ => "txt"
         };
-        
+
         let file_name_with_ext = if file_name.contains('.') {
             file_name.clone()
         } else {
             format!("{}.{}", file_name, extension)
         };
-        
+
         let output_file = std::path::Path::new(&output_path).join(&file_name_with_ext);
-        
+
         // Process content based on options
         let processed_content = process_transcription_content(
-            content,
+            &content,
             &timecode_format,
             custom_timecode_format.as_deref(),
             include_extended_info,

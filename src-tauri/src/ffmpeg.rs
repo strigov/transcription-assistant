@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use reqwest;
+use sha2::{Sha256, Digest};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tokio::fs;
@@ -89,11 +90,21 @@ impl FFmpegManager {
         #[cfg(not(target_os = "windows"))]
         let command = "ffmpeg";
 
-        if let Ok(output) = Command::new("which").arg(command).output() {
+        #[cfg(target_os = "windows")]
+        let lookup_cmd = "where";
+        #[cfg(not(target_os = "windows"))]
+        let lookup_cmd = "which";
+
+        if let Ok(output) = Command::new(lookup_cmd).arg(command).output() {
             if output.status.success() {
                 let path_str = String::from_utf8_lossy(&output.stdout);
-                let trimmed_path = path_str.trim();
-                return Some(PathBuf::from(trimmed_path));
+                // `where` on Windows may return multiple paths; take the first line
+                if let Some(first_line) = path_str.lines().next() {
+                    let trimmed_path = first_line.trim();
+                    if !trimmed_path.is_empty() {
+                        return Some(PathBuf::from(trimmed_path));
+                    }
+                }
             }
         }
 
@@ -145,7 +156,7 @@ impl FFmpegManager {
     async fn download_ffmpeg_internal(&self, window: Option<Window>) -> Result<()> {
         let download_url = self.get_download_url();
         let ffmpeg_dir = self.ffmpeg_path.parent().unwrap();
-        
+
         // Create directory
         fs::create_dir_all(ffmpeg_dir).await?;
 
@@ -157,44 +168,69 @@ impl FFmpegManager {
             }));
         }
 
+        // Determine archive extension from URL
+        let archive_ext = if download_url.ends_with(".tar.xz") {
+            "tar.xz"
+        } else {
+            "zip"
+        };
+        let archive_path = ffmpeg_dir.join(format!("ffmpeg.{}", archive_ext));
+
         // Download FFmpeg with progress
         println!("Downloading FFmpeg from: {}", download_url);
         let response = reqwest::get(&download_url).await?;
-        
+
         if !response.status().is_success() {
             return Err(anyhow!("Failed to download FFmpeg: HTTP {}", response.status()));
         }
 
         let total_size = response.content_length().unwrap_or(0);
         let mut downloaded = 0u64;
+        let mut hasher = Sha256::new();
         let mut stream = response.bytes_stream();
-        
-        let archive_path = ffmpeg_dir.join("ffmpeg.zip");
+
         let mut file = fs::File::create(&archive_path).await?;
-        
+
         while let Some(chunk_result) = stream.next().await {
             let chunk = chunk_result?;
             file.write_all(&chunk).await?;
-            
+            hasher.update(&chunk);
+
             downloaded += chunk.len() as u64;
-            
+
             if let Some(ref w) = window {
                 let progress = if total_size > 0 {
-                    (downloaded as f32 / total_size as f32 * 90.0) as u32 // 90% for download, 10% for extraction
+                    (downloaded as f32 / total_size as f32 * 80.0) as u32
                 } else {
-                    45 // If we can't determine size, just show 45%
+                    40
                 };
-                
+
                 let _ = w.emit("ffmpeg-download-progress", serde_json::json!({
                     "progress": progress,
-                    "message": format!("Скачано: {}/{}", format_bytes(downloaded), 
+                    "message": format!("Скачано: {}/{}", format_bytes(downloaded),
                                      if total_size > 0 { format_bytes(total_size) } else { "неизвестно".to_string() })
                 }));
             }
         }
-        
+
         file.sync_all().await?;
         drop(file);
+
+        let download_hash = format!("{:x}", hasher.finalize());
+
+        // Verify SHA256 checksum (BtbN builds publish .sha256 files)
+        if let Some(ref w) = window {
+            let _ = w.emit("ffmpeg-download-progress", serde_json::json!({
+                "progress": 82,
+                "message": "Проверяем контрольную сумму..."
+            }));
+        }
+
+        if let Err(e) = self.verify_checksum(&download_url, &download_hash).await {
+            // Clean up and fail on checksum mismatch
+            let _ = fs::remove_file(&archive_path).await;
+            return Err(e);
+        }
 
         // Emit extraction progress
         if let Some(ref w) = window {
@@ -204,10 +240,14 @@ impl FFmpegManager {
             }));
         }
 
-        // Extract zip
-        self.extract_ffmpeg(&archive_path).await?;
-        
-        // Clean up zip file
+        // Extract based on archive type
+        if archive_ext == "tar.xz" {
+            self.extract_tar_xz(&archive_path).await?;
+        } else {
+            self.extract_zip(&archive_path).await?;
+        }
+
+        // Clean up archive
         fs::remove_file(archive_path).await?;
 
         // Emit completion
@@ -222,6 +262,58 @@ impl FFmpegManager {
         Ok(())
     }
 
+    fn checksum_required(download_url: &str) -> bool {
+        // BtbN builds always publish .sha256 files; verification is mandatory
+        download_url.contains("github.com/BtbN/")
+    }
+
+    async fn verify_checksum(&self, download_url: &str, actual_hash: &str) -> Result<()> {
+        let checksum_url = format!("{}.sha256", download_url);
+        let required = Self::checksum_required(download_url);
+        println!("Verifying checksum from: {} (required: {})", checksum_url, required);
+
+        match reqwest::get(&checksum_url).await {
+            Ok(response) if response.status().is_success() => {
+                let checksum_text = response.text().await?;
+                // BtbN format: "<hash>  <filename>" or just "<hash>"
+                let expected_hash = checksum_text.split_whitespace().next().unwrap_or("").trim();
+                if expected_hash.is_empty() {
+                    if required {
+                        return Err(anyhow!("SHA256 checksum file is empty"));
+                    }
+                    println!("Warning: empty checksum file, skipping verification");
+                    return Ok(());
+                }
+                if actual_hash != expected_hash {
+                    return Err(anyhow!(
+                        "SHA256 checksum mismatch: expected {}, got {}",
+                        expected_hash,
+                        actual_hash
+                    ));
+                }
+                println!("Checksum verified: {}", actual_hash);
+                Ok(())
+            }
+            Ok(response) => {
+                if required {
+                    return Err(anyhow!(
+                        "Failed to fetch checksum file: HTTP {}",
+                        response.status()
+                    ));
+                }
+                println!("Warning: checksum file not available, skipping verification");
+                Ok(())
+            }
+            Err(e) => {
+                if required {
+                    return Err(anyhow!("Failed to fetch checksum file: {}", e));
+                }
+                println!("Warning: checksum file not available ({}), skipping verification", e);
+                Ok(())
+            }
+        }
+    }
+
     fn get_download_url(&self) -> String {
         #[cfg(target_os = "windows")]
         return "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip".to_string();
@@ -233,21 +325,21 @@ impl FFmpegManager {
         return "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz".to_string();
     }
 
-    async fn extract_ffmpeg(&self, archive_path: &Path) -> Result<()> {
+    async fn extract_zip(&self, archive_path: &Path) -> Result<()> {
         let file = std::fs::File::open(archive_path)?;
         let mut archive = ZipArchive::new(file)?;
-        
+
         for i in 0..archive.len() {
             let mut file = archive.by_index(i)?;
             let file_path = file.mangled_name();
-            
-            if file_path.file_name().unwrap_or_default() == "ffmpeg" 
+
+            if file_path.file_name().unwrap_or_default() == "ffmpeg"
                 || file_path.file_name().unwrap_or_default() == "ffmpeg.exe" {
-                
+
                 let target_path = &self.ffmpeg_path;
                 let mut target_file = std::fs::File::create(target_path)?;
                 std::io::copy(&mut file, &mut target_file)?;
-                
+
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::PermissionsExt;
@@ -255,12 +347,91 @@ impl FFmpegManager {
                     perms.set_mode(0o755);
                     std::fs::set_permissions(target_path, perms)?;
                 }
-                
+
                 break;
             }
         }
-        
+
         Ok(())
+    }
+
+    async fn extract_tar_xz(&self, archive_path: &Path) -> Result<()> {
+        let ffmpeg_dir = self.ffmpeg_path.parent()
+            .ok_or_else(|| anyhow!("Invalid ffmpeg path"))?;
+
+        // Use system tar which supports xz on Linux/macOS
+        let output = Command::new("tar")
+            .args(["xf", &archive_path.to_string_lossy(), "--wildcards", "--no-anchored", "ffmpeg", "-C", &ffmpeg_dir.to_string_lossy(), "--strip-components=2"])
+            .output()
+            .map_err(|e| anyhow!("Failed to run tar: {}. Is tar installed?", e))?;
+
+        if !output.status.success() {
+            // Fallback: extract everything and find ffmpeg binary
+            let output = Command::new("tar")
+                .args(["xf", &archive_path.to_string_lossy(), "-C", &ffmpeg_dir.to_string_lossy()])
+                .output()
+                .map_err(|e| anyhow!("Failed to run tar: {}", e))?;
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                return Err(anyhow!("tar extraction failed: {}", stderr));
+            }
+
+            // Find the ffmpeg binary in extracted directory
+            self.find_and_move_ffmpeg(ffmpeg_dir).await?;
+        }
+
+        // Set executable permission
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if self.ffmpeg_path.exists() {
+                let mut perms = std::fs::metadata(&self.ffmpeg_path)?.permissions();
+                perms.set_mode(0o755);
+                std::fs::set_permissions(&self.ffmpeg_path, perms)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn find_and_move_ffmpeg(&self, search_dir: &Path) -> Result<()> {
+        // Recursively find the ffmpeg binary in extracted archive
+        let target_name = if cfg!(target_os = "windows") { "ffmpeg.exe" } else { "ffmpeg" };
+
+        fn find_file(dir: &Path, name: &str) -> Option<PathBuf> {
+            if let Ok(entries) = std::fs::read_dir(dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        if let Some(found) = find_file(&path, name) {
+                            return Some(found);
+                        }
+                    } else if path.file_name().map(|n| n == name).unwrap_or(false) {
+                        return Some(path);
+                    }
+                }
+            }
+            None
+        }
+
+        if let Some(found) = find_file(search_dir, target_name) {
+            if found != self.ffmpeg_path {
+                std::fs::rename(&found, &self.ffmpeg_path)?;
+            }
+            // Clean up extracted directories (everything except the ffmpeg binary)
+            if let Ok(entries) = std::fs::read_dir(search_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path != self.ffmpeg_path && path.is_dir() {
+                        let _ = std::fs::remove_dir_all(&path);
+                    }
+                }
+            }
+            Ok(())
+        } else {
+            Err(anyhow!("ffmpeg binary not found in extracted archive"))
+        }
     }
 
     pub async fn get_file_info(&self, file_path: &str) -> Result<(String, f64)> {

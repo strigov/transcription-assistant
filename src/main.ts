@@ -26,6 +26,12 @@ async function initApp() {
   }
 }
 
+function escapeHtml(str: string): string {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
 class TranscriptionAssistant {
   private selectedFile: string | null = null;
   private transcriptionFiles: string[] = [];
@@ -248,7 +254,7 @@ class TranscriptionAssistant {
             </svg>
             <div class="folder-details">
               <div class="folder-label">Папка с сегментами:</div>
-              <div class="folder-path" title="${outputFolder}">${this.truncatePath(outputFolder)}</div>
+              <div class="folder-path" title="${escapeHtml(outputFolder)}">${escapeHtml(this.truncatePath(outputFolder))}</div>
             </div>
           </div>
           <button class="btn btn-primary" id="openFolderBtn">
@@ -286,8 +292,8 @@ class TranscriptionAssistant {
         segmentItem.innerHTML = `
           <div class="segment-number">${index + 1}</div>
           <div class="segment-details">
-            <div class="segment-name">${filename}</div>
-            <div class="segment-duration">${segment.duration || 'неизвестно'}</div>
+            <div class="segment-name">${escapeHtml(filename)}</div>
+            <div class="segment-duration">${escapeHtml(segment.duration || 'неизвестно')}</div>
           </div>
         `;
         
@@ -352,7 +358,8 @@ class TranscriptionAssistant {
   private setDefaultOutputPath() {
     if (this.transcriptionFiles.length > 0) {
       const firstFilePath = this.transcriptionFiles[0];
-      const directory = firstFilePath.substring(0, firstFilePath.lastIndexOf('/'));
+      const lastSlash = Math.max(firstFilePath.lastIndexOf('/'), firstFilePath.lastIndexOf('\\'));
+      const directory = lastSlash !== -1 ? firstFilePath.substring(0, lastSlash) : firstFilePath;
       const outputPathInput = document.getElementById('outputPath') as HTMLInputElement;
       if (!this.lastOutputPath) {
         outputPathInput.value = directory;
@@ -409,7 +416,7 @@ class TranscriptionAssistant {
       // Create file name
       const fileName = document.createElement('span');
       fileName.className = 'file-item-name';
-      fileName.textContent = file.split('/').pop() || '';
+      fileName.textContent = file.split(/[\\/]/).pop() || '';
       
       // Assemble info
       fileInfo.appendChild(orderDiv);
@@ -506,7 +513,8 @@ class TranscriptionAssistant {
   public async openFolder(filePath: string) {
     try {
       // Получить каталог, содержащий файл
-      const directory = filePath.substring(0, filePath.lastIndexOf('/'));
+      const lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+      const directory = lastSlash !== -1 ? filePath.substring(0, lastSlash) : filePath;
       await this.invoke('open_folder', { path: directory });
     } catch (error) {
       console.error('Ошибка открытия папки:', error);

@@ -1,6 +1,6 @@
 [package]
 name = "transcription-assistant"
-version = "0.2.5"
+version = "0.2.6"
 description = "Desktop application for audio/video transcription workflow assistance"
 authors = ["Transcription Assistant Team"]
 license = "MIT"
@@ -25,6 +25,8 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 lazy_static = "1.4"
 dirs = "5.0"
 futures-util = "0.3"
+sha2 = "0.10"
+encoding_rs = "0.8"
 
 [features]
 default = ["custom-protocol"]
