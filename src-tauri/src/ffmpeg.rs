@@ -11,7 +11,6 @@ use tauri::Window;
 
 pub struct FFmpegManager {
     ffmpeg_path: PathBuf,
-    app_data_dir: PathBuf,
 }
 
 impl FFmpegManager {
@@ -26,7 +25,6 @@ impl FFmpegManager {
 
         Ok(Self {
             ffmpeg_path,
-            app_data_dir,
         })
     }
 

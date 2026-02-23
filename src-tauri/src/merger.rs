@@ -16,6 +16,7 @@ pub struct TranscriptionSegment {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct TranscriptionFile {
     pub path: PathBuf,
     pub filename: String,

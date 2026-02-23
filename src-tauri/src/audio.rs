@@ -2,8 +2,6 @@ use anyhow::{anyhow, Result};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tokio::fs;
-use uuid::Uuid;
-
 use crate::ffmpeg::FFmpegManager;
 
 #[derive(Debug, Clone)]
@@ -33,7 +31,6 @@ impl Default for ProcessingOptions {
 
 pub struct AudioProcessor {
     ffmpeg_manager: FFmpegManager,
-    output_dir: Option<PathBuf>,
 }
 
 impl AudioProcessor {
@@ -42,7 +39,6 @@ impl AudioProcessor {
         
         Ok(Self {
             ffmpeg_manager,
-            output_dir: None,
         })
     }
 
