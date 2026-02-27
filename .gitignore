@@ -145,3 +145,4 @@ test-files/
 .claude/settings.local.json
 claude.md
 CLAUDE.md
+.claude/

@@ -3,7 +3,9 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(dir)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(cd D:/Projects/transcription-assistant/src-tauri && cargo test 2>&1)",
+      "Bash(cd D:/Projects/transcription-assistant && npm run build 2>&1)"
     ],
     "deny": [],
     "ask": []
