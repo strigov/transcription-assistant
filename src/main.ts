@@ -94,6 +94,10 @@ class TranscriptionAssistant {
     await this.listen('ffmpeg-download-progress', (event: any) => {
       this.updateFFmpegDownloadProgress(event.payload.progress, event.payload.message);
     });
+
+    await this.listen('ffmpeg-download-error', (event: any) => {
+      this.updateFFmpegDownloadError(event.payload.message);
+    });
   }
 
   private async selectFile() {
@@ -152,7 +156,12 @@ class TranscriptionAssistant {
     const statusContainer = document.getElementById('ffmpegStatus')!;
     const progressContainer = document.getElementById('ffmpegDownloadProgress')!;
     const readyStatus = document.getElementById('ffmpegReady')!;
+    const errorStatus = document.getElementById('ffmpegError')!;
     
+    if (errorStatus.style.display === 'flex') {
+      return;
+    }
+
     if (progressContainer.style.display !== 'block') {
       statusContainer.style.display = 'block';
       readyStatus.style.display = 'flex';
@@ -194,9 +203,11 @@ class TranscriptionAssistant {
     const progressFill = document.getElementById('ffmpegProgressFill')!;
     const progressText = document.getElementById('ffmpegProgressText')!;
     const readyStatus = document.getElementById('ffmpegReady')!;
+    const errorStatus = document.getElementById('ffmpegError')!;
 
     // Show status container
     statusContainer.style.display = 'block';
+    errorStatus.style.display = 'none';
     
     if (progress < 100) {
       // Show download progress
@@ -210,8 +221,23 @@ class TranscriptionAssistant {
       setTimeout(() => {
         progressContainer.style.display = 'none';
         readyStatus.style.display = 'flex';
+        errorStatus.style.display = 'none';
       }, 1000);
     }
+  }
+
+  private updateFFmpegDownloadError(message: string) {
+    const statusContainer = document.getElementById('ffmpegStatus')!;
+    const progressContainer = document.getElementById('ffmpegDownloadProgress')!;
+    const readyStatus = document.getElementById('ffmpegReady')!;
+    const errorStatus = document.getElementById('ffmpegError')!;
+    const errorText = document.getElementById('ffmpegErrorText')!;
+
+    statusContainer.style.display = 'block';
+    progressContainer.style.display = 'none';
+    readyStatus.style.display = 'none';
+    errorStatus.style.display = 'flex';
+    errorText.textContent = message;
   }
 
   private onProcessingComplete(result: any) {

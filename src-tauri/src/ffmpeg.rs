@@ -3,6 +3,7 @@ use reqwest;
 use sha2::{Sha256, Digest};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use zip::ZipArchive;
@@ -227,6 +228,11 @@ impl FFmpegManager {
         if let Err(e) = self.verify_checksum(&download_url, &download_hash).await {
             // Clean up and fail on checksum mismatch
             let _ = fs::remove_file(&archive_path).await;
+            if let Some(ref w) = window {
+                let _ = w.emit("ffmpeg-download-error", serde_json::json!({
+                    "message": format!("Не удалось проверить контрольную сумму FFmpeg: {}", e)
+                }));
+            }
             return Err(e);
         }
 
@@ -265,24 +271,77 @@ impl FFmpegManager {
         download_url.contains("github.com/BtbN/")
     }
 
+    fn checksum_url(download_url: &str) -> String {
+        if Self::checksum_required(download_url) {
+            if let Some((base_url, _filename)) = download_url.rsplit_once('/') {
+                return format!("{}/checksums.sha256", base_url);
+            }
+        }
+
+        format!("{}.sha256", download_url)
+    }
+
+    fn archive_filename(download_url: &str) -> &str {
+        download_url.rsplit('/').next().unwrap_or(download_url)
+    }
+
+    fn expected_hash_from_checksum_text(
+        checksum_text: &str,
+        download_url: &str,
+        is_manifest: bool,
+    ) -> Option<String> {
+        if !is_manifest {
+            return checksum_text
+                .split_whitespace()
+                .next()
+                .map(|hash| hash.trim().to_string())
+                .filter(|hash| !hash.is_empty());
+        }
+
+        let archive_filename = Self::archive_filename(download_url);
+        checksum_text.lines().find_map(|line| {
+            let mut parts = line.split_whitespace();
+            let hash = parts.next()?.trim();
+            let filename = parts.next()?.trim().trim_start_matches("./").trim_start_matches('*');
+
+            if filename == archive_filename && !hash.is_empty() {
+                Some(hash.to_string())
+            } else {
+                None
+            }
+        })
+    }
+
     async fn verify_checksum(&self, download_url: &str, actual_hash: &str) -> Result<()> {
-        let checksum_url = format!("{}.sha256", download_url);
+        let checksum_url = Self::checksum_url(download_url);
         let required = Self::checksum_required(download_url);
         println!("Verifying checksum from: {} (required: {})", checksum_url, required);
 
-        match reqwest::get(&checksum_url).await {
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(30))
+            .build()?;
+
+        match client.get(&checksum_url).send().await {
             Ok(response) if response.status().is_success() => {
                 let checksum_text = response.text().await?;
-                // BtbN format: "<hash>  <filename>" or just "<hash>"
-                let expected_hash = checksum_text.split_whitespace().next().unwrap_or("").trim();
-                if expected_hash.is_empty() {
+                let expected_hash = Self::expected_hash_from_checksum_text(
+                    &checksum_text,
+                    download_url,
+                    required,
+                );
+
+                let Some(expected_hash) = expected_hash else {
                     if required {
-                        return Err(anyhow!("SHA256 checksum file is empty"));
+                        return Err(anyhow!(
+                            "SHA256 checksum for {} not found in checksums.sha256",
+                            Self::archive_filename(download_url)
+                        ));
                     }
                     println!("Warning: empty checksum file, skipping verification");
                     return Ok(());
-                }
-                if actual_hash != expected_hash {
+                };
+
+                if !actual_hash.eq_ignore_ascii_case(&expected_hash) {
                     return Err(anyhow!(
                         "SHA256 checksum mismatch: expected {}, got {}",
                         expected_hash,
@@ -609,4 +668,33 @@ fn format_bytes(bytes: u64) -> String {
     }
 
     format!("{:.1} {}", size, UNITS[unit_index])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FFmpegManager;
+
+    #[test]
+    fn btbn_checksum_url_uses_release_manifest() {
+        let download_url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip";
+
+        assert_eq!(
+            FFmpegManager::checksum_url(download_url),
+            "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/checksums.sha256"
+        );
+    }
+
+    #[test]
+    fn btbn_manifest_hash_is_selected_by_archive_filename() {
+        let download_url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip";
+        let checksums = "\
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  ffmpeg-master-latest-linux64-gpl.tar.xz
+e6ffd92458b8e3041825e733e2cf354ee0d439ed04353c123aa83f50c263fe26  ffmpeg-master-latest-win64-gpl.zip
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  ffmpeg-master-latest-win64-lgpl.zip";
+
+        assert_eq!(
+            FFmpegManager::expected_hash_from_checksum_text(checksums, download_url, true),
+            Some("e6ffd92458b8e3041825e733e2cf354ee0d439ed04353c123aa83f50c263fe26".to_string())
+        );
+    }
 }
